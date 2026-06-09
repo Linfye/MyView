@@ -19,12 +19,17 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  // 2. 去 profiles 表里捞出用户的 display_name 还有全新的 is_admin 状态！
+  // 2. 去 profiles 表里捞出用户的昵称、用户名、以及管理员和头像状态
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, is_admin")
+    .select("username, display_name, is_admin")
     .eq("id", user.id)
     .single();
+
+  // 生成一个优雅的右上角圆形文字头像（截取昵称或用户名的第一个字，强制转为大写）
+  const initialLetter = (profile?.display_name || profile?.username || "M")
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -52,8 +57,13 @@ export default async function AppLayout({
               >
                 书影归档
               </Link>
+              <Link
+                href="/friends"
+                className="transition-colors hover:text-slate-900 text-slate-600"
+              >
+                密友圈
+              </Link>
 
-              {/* 🌟 核心升级：如果你是管理员，导航栏就会施展魔法，凭空多出一个专享入口 */}
               {profile?.is_admin && (
                 <Link
                   href="/admin"
@@ -65,11 +75,22 @@ export default async function AppLayout({
             </nav>
           </div>
 
-          {/* 右侧动态用户信息 */}
+          {/* 🌟 右侧动态用户信息：整合头像与昵称点击 🌟 */}
           <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600 font-medium">
-              你好，{profile?.display_name || "无名归档者"}
-            </span>
+            {/* 点击昵称或头像均能秒切进入设置页面 */}
+            <Link
+              href="/settings"
+              className="flex items-center gap-2 group cursor-pointer"
+            >
+              <span className="text-sm text-slate-600 font-medium group-hover:text-slate-900 transition-colors">
+                {profile?.display_name || "未命名用户"}
+              </span>
+
+              {/* 精致的圆形文字头像 */}
+              <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center border border-slate-200 shadow-sm group-hover:bg-slate-800 transition-colors">
+                {initialLetter}
+              </div>
+            </Link>
 
             <form
               action={async () => {
@@ -83,7 +104,7 @@ export default async function AppLayout({
                 variant="ghost"
                 size="sm"
                 type="submit"
-                className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 px-2"
               >
                 退出
               </Button>
