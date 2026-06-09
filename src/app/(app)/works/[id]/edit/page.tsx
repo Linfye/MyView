@@ -71,7 +71,10 @@ export default function EditWorkPage({
         setOldCanonicalWorkId(data.canonical_work_id);
         // 如果之前绑定过，直接把那个大写的 ID 填入框里回显出来
         if (data.canonical_works) {
-          setCanonicalId((data.canonical_works as any).canonical_id || "");
+          const cw = data.canonical_works as unknown as {
+            canonical_id?: string;
+          };
+          setCanonicalId(cw?.canonical_id || "");
         }
       }
       setFetching(false);

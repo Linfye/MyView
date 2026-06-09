@@ -13,6 +13,7 @@ export default function AdminEditCanonicalPage({
   const { id } = use(params);
 
   const [canonicalId, setCanonicalId] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [type, setType] = useState("movie");
   const [titleZh, setTitleZh] = useState("");
   const [titleEn, setTitleEn] = useState("");

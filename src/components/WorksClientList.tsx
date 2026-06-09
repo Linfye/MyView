@@ -4,16 +4,36 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+interface WorkItem {
+  id: string;
+  type: string;
+  title: string;
+  creator?: string;
+  year?: number;
+  rating: number;
+  status: string;
+  visibility: string;
+  short_review?: string;
+  long_review?: string;
+  viewed_at: string;
+  time_precision?: string;
+  canonical_works?: {
+    canonical_id?: string;
+    title_zh?: string;
+    title_en?: string;
+  } | null;
+}
+
 export default function WorksClientList({
   initialItems,
 }: {
-  initialItems: any[];
+  initialItems: WorkItem[];
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [eraFilter, setEraFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4; // 每页展示4条，方便测试切页
+  const itemsPerPage = 4;
 
   const [expandedReviews, setExpandedReviews] = useState<{
     [key: string]: boolean;
@@ -74,7 +94,6 @@ export default function WorksClientList({
 
   return (
     <div className="space-y-6">
-      {/* 搜索控制台 */}
       <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
         <div className="md:col-span-2">
           <input
@@ -114,7 +133,6 @@ export default function WorksClientList({
         </div>
       </div>
 
-      {/* 列表流 */}
       {currentDisplayedItems.length === 0 ? (
         <div className="mt-8 text-center border border-dashed rounded-xl p-12 text-xs text-slate-400 bg-white">
           未找到匹配的归档记录。
@@ -124,7 +142,7 @@ export default function WorksClientList({
           {currentDisplayedItems.map((item) => {
             const isExpanded = expandedReviews[item.id] || false;
             const hasLong = !!item.long_review;
-            const isTooLong = hasLong && item.long_review.length > 120;
+            const isTooLong = hasLong && (item.long_review?.length || 0) > 120;
 
             return (
               <div
@@ -167,17 +185,17 @@ export default function WorksClientList({
 
                   {item.short_review && (
                     <p className="text-sm font-medium text-slate-800 mt-3 border-l-2 border-slate-200 pl-2">
-                      "{item.short_review}"
+                      “{item.short_review}”
                     </p>
                   )}
 
-                  {hasLong && (
+                  {hasLong && item.long_review && (
                     <div className="mt-4 pt-3 border-t border-slate-100">
                       <span className="text-[10px] font-bold text-slate-400 block mb-1">
                         ✒️ 我的长评
                       </span>
                       <div className="bg-slate-50 p-3 rounded-xl text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
-                        {isTooLong && !isExpanded
+                        {isTooLong
                           ? `${item.long_review.slice(0, 120)}...`
                           : item.long_review}
                       </div>
@@ -211,7 +229,6 @@ export default function WorksClientList({
         </div>
       )}
 
-      {/* 分页控制 */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-4 pt-4 border-t border-slate-100">
           <Button

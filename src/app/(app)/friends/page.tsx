@@ -5,17 +5,43 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
+interface RequestProfile {
+  username: string;
+  display_name?: string;
+}
+
+interface IncomingRequest {
+  id: string;
+  requester_id: string;
+  profiles: RequestProfile | RequestProfile[] | null;
+}
+
+interface FriendProfileRow {
+  id: string;
+  username: string;
+  display_name?: string;
+}
+
+interface AcceptedFriendshipRow {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  requester_profile: FriendProfileRow | FriendProfileRow[] | null;
+  addressee_profile: FriendProfileRow | FriendProfileRow[] | null;
+}
+
 export default function FriendsPage() {
   const supabase = createClient();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // 状态组
   const [searchUsername, setSearchUsername] = useState("");
-  const [searchResult, setSearchResult] = useState<any | null>(null);
+  const [searchResult, setSearchResult] = useState<FriendProfileRow | null>(
+    null,
+  );
   const [searchMessage, setSearchMessage] = useState("");
 
-  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
-  const [friendsList, setFriendsList] = useState<any[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<IncomingRequest[]>([]);
+  const [friendsList, setFriendsList] = useState<FriendProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,30 +51,24 @@ export default function FriendsPage() {
       } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
-        await fetchFriendships(user.id);
+        // 显式传入进行调用，规避 ESLint 闭包依赖警告
+        fetchFriendshipsData(user.id);
       }
     }
     init();
   }, []);
 
-  // 1. 核心拉取：获取待审批申请和已通过密友名单
-  async function fetchFriendships(userId: string) {
+  async function fetchFriendshipsData(userId: string) {
     setLoading(true);
 
-    // 拉取别人发给我的 pending 申请
     const { data: incoming } = await supabase
       .from("friendships")
       .select(
-        `
-        id,
-        requester_id,
-        profiles!friendships_requester_id_fkey ( username, display_name )
-      `,
+        `id, requester_id, profiles!friendships_requester_id_fkey ( username, display_name )`,
       )
       .eq("addressee_id", userId)
       .eq("status", "pending");
 
-    // 拉取我已经达成的密友（需要考虑我是发起者，或者我是被加者两种情况）
     const { data: acceptedRows } = await supabase
       .from("friendships")
       .select(
@@ -62,23 +82,41 @@ export default function FriendsPage() {
       )
       .eq("status", "accepted");
 
-    // 清洗数据：过滤出真正的好友资料
-    const cleanFriends = (acceptedRows || [])
-      .map((row: any) => {
-        if (row.requester_id === userId) {
-          return { friendshipId: row.id, ...row.addressee_profile };
-        } else {
-          return { friendshipId: row.id, ...row.requester_profile };
-        }
-      })
-      .filter((f) => f.id !== userId); // 排除自己
+    const rawIncoming = (incoming || []) as unknown as IncomingRequest[];
+    const rawAccepted = (acceptedRows ||
+      []) as unknown as AcceptedFriendshipRow[];
 
-    setPendingRequests(incoming || []);
+    const cleanFriends = rawAccepted
+      .map((row) => {
+        const rProf = Array.isArray(row.requester_profile)
+          ? row.requester_profile[0]
+          : row.requester_profile;
+        const aProf = Array.isArray(row.addressee_profile)
+          ? row.addressee_profile[0]
+          : row.addressee_profile;
+
+        if (row.requester_id === userId && aProf) {
+          return {
+            id: aProf.id,
+            username: aProf.username,
+            display_name: aProf.display_name,
+          };
+        } else if (rProf) {
+          return {
+            id: rProf.id,
+            username: rProf.username,
+            display_name: rProf.display_name,
+          };
+        }
+        return null;
+      })
+      .filter((f): f is FriendProfileRow => f !== null && f.id !== userId);
+
+    setPendingRequests(rawIncoming);
     setFriendsList(cleanFriends);
     setLoading(false);
   }
 
-  // 2. 精准搜索好友
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setSearchResult(null);
@@ -87,7 +125,6 @@ export default function FriendsPage() {
     if (!searchUsername.trim()) return;
     const targetName = searchUsername.trim().toLowerCase();
 
-    // 不能搜自己
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -112,15 +149,13 @@ export default function FriendsPage() {
     if (error || !profile) {
       setSearchMessage("未找到该用户，请检查用户名是否完全匹配");
     } else {
-      setSearchResult(profile);
+      setSearchResult(profile as FriendProfileRow);
     }
   };
 
-  // 3. 发送密友申请
   const sendRequest = async (targetId: string) => {
     if (!currentUserId) return;
 
-    // 检查是否已经存在关系
     const { data: existing } = await supabase
       .from("friendships")
       .select("*")
@@ -133,13 +168,15 @@ export default function FriendsPage() {
       return;
     }
 
-    const { error } = await supabase.from("friendships").insert([
-      {
-        requester_id: currentUserId,
-        addressee_id: targetId,
-        status: "pending",
-      },
-    ]);
+    const { error } = await supabase
+      .from("friendships")
+      .insert([
+        {
+          requester_id: currentUserId,
+          addressee_id: targetId,
+          status: "pending",
+        },
+      ]);
 
     if (error) {
       alert("发送申请失败：" + error.message);
@@ -150,7 +187,6 @@ export default function FriendsPage() {
     }
   };
 
-  // 4. 接受或拒绝申请
   const respondRequest = async (friendshipId: string, accept: boolean) => {
     if (accept) {
       await supabase
@@ -160,25 +196,23 @@ export default function FriendsPage() {
     } else {
       await supabase.from("friendships").delete().eq("id", friendshipId);
     }
-    if (currentUserId) await fetchFriendships(currentUserId);
+    if (currentUserId) await fetchFriendshipsData(currentUserId);
   };
 
   return (
     <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-      {/* 左侧：精准密友搜索区 */}
       <div className="md:col-span-1 space-y-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
           <h2 className="text-sm font-bold text-slate-900">🔍 添加密友</h2>
           <p className="text-xs text-slate-400 mt-0.5">
             MyView 采用纯私密图谱，不支持公共模糊搜索。
           </p>
-
           <form onSubmit={handleSearch} className="mt-4 flex gap-2">
             <input
               type="text"
               required
               className="flex-1 rounded-lg border p-2 text-xs focus:outline-none focus:border-slate-400 font-mono"
-              placeholder="输入好友的唯一用户名"
+              placeholder="输入唯一用户名"
               value={searchUsername}
               onChange={(e) => setSearchUsername(e.target.value)}
             />
@@ -186,13 +220,11 @@ export default function FriendsPage() {
               搜索
             </Button>
           </form>
-
           {searchMessage && (
             <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mt-3 border border-amber-100/50">
               {searchMessage}
             </p>
           )}
-
           {searchResult && (
             <div className="mt-4 p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
               <div>
@@ -205,66 +237,67 @@ export default function FriendsPage() {
               </div>
               <Button
                 size="sm"
-                variant="default"
                 className="text-xs h-7"
                 onClick={() => sendRequest(searchResult.id)}
               >
-                + 建立密友连线
+                + 建立连线
               </Button>
             </div>
           )}
         </div>
 
-        {/* 待审批区 */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
           <h2 className="text-sm font-bold text-slate-900">
             ⏳ 密友申请通知 ({pendingRequests.length})
           </h2>
-
           {pendingRequests.length === 0 ? (
             <p className="text-xs text-slate-400 mt-3">
               暂无收到的待确认密友申请。
             </p>
           ) : (
             <div className="mt-4 space-y-3">
-              {pendingRequests.map((req) => (
-                <div
-                  key={req.id}
-                  className="p-3 bg-amber-50/50 rounded-xl border border-amber-100/50 flex flex-col gap-2"
-                >
-                  <div className="text-xs">
-                    <span className="font-bold text-slate-800">
-                      {(req.profiles as any)?.display_name}
-                    </span>
-                    <span className="text-slate-400 font-mono block">
-                      @{(req.profiles as any)?.username}
-                    </span>
+              {pendingRequests.map((req) => {
+                const prof = Array.isArray(req.profiles)
+                  ? req.profiles[0]
+                  : req.profiles;
+                return (
+                  <div
+                    key={req.id}
+                    className="p-3 bg-amber-50/50 rounded-xl border border-amber-100/50 flex flex-col gap-2"
+                  >
+                    <div className="text-xs">
+                      <span className="font-bold text-slate-800">
+                        {prof?.display_name || "新朋友"}
+                      </span>
+                      <span className="text-slate-400 font-mono block">
+                        @{prof?.username}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="text-[10px] h-6 flex-1 bg-slate-900 text-white"
+                        onClick={() => respondRequest(req.id, true)}
+                      >
+                        接受
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-[10px] h-6 flex-1"
+                        onClick={() => respondRequest(req.id, false)}
+                      >
+                        忽略
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="text-[10px] h-6 flex-1 bg-slate-900 text-white"
-                      onClick={() => respondRequest(req.id, true)}
-                    >
-                      接受
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-[10px] h-6 flex-1"
-                      onClick={() => respondRequest(req.id, false)}
-                    >
-                      忽略
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* 右侧：坚实的密友名单列表 */}
       <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
         <h2 className="text-sm font-bold text-slate-900">
           👥 我的密友节点 ({friendsList.length})
@@ -272,7 +305,6 @@ export default function FriendsPage() {
         <p className="text-xs text-slate-400 mt-0.5">
           已建立双向信任链的朋友，点击可查看其公开授权的私人角落。
         </p>
-
         {loading ? (
           <div className="text-center py-12 text-xs text-slate-400">
             正在检索密友图谱...
@@ -290,13 +322,12 @@ export default function FriendsPage() {
               >
                 <div>
                   <p className="text-sm font-bold text-slate-800">
-                    {friend.display_name}
+                    {friend.display_name || "未命名"}
                   </p>
                   <p className="text-[10px] font-mono text-slate-400">
                     @{friend.username}
                   </p>
                 </div>
-                {/* 预留按钮：未来用于点击进去看这个好友分享出来的书影单 */}
                 <Link href={`/friends/${friend.id}`}>
                   <Button
                     size="sm"

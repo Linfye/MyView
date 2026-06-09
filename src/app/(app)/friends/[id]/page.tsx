@@ -5,6 +5,33 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
+interface FriendWorkItem {
+  id: string;
+  type: string;
+  title: string;
+  creator?: string;
+  year?: number;
+  rating: number;
+  short_review?: string;
+  long_review?: string;
+  viewed_at: string;
+  canonical_work_id?: string | null;
+  canonical_works?: {
+    canonical_id?: string;
+    title_zh?: string;
+    title_en?: string;
+    creator_name?: string;
+  } | null;
+}
+
+interface CommonItemMatch {
+  title: string;
+  type: string;
+  canonicalId?: string;
+  myRating: number;
+  friendRating: number;
+}
+
 export default function FriendDetailPage({
   params,
 }: {
@@ -14,19 +41,22 @@ export default function FriendDetailPage({
   const supabase = createClient();
   const router = useRouter();
 
-  const [friendProfile, setFriendProfile] = useState<any | null>(null);
-  const [friendItems, setFriendItems] = useState<any[]>([]);
-  const [commonItems, setCommonItems] = useState<any[]>([]);
+  const [friendProfile, setFriendProfile] = useState<{
+    username: string;
+    display_name?: string;
+    bio?: string;
+    contact_info?: string;
+  } | null>(null);
+  const [friendItems, setFriendItems] = useState<FriendWorkItem[]>([]);
+  const [commonItems, setCommonItems] = useState<CommonItemMatch[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🌟 新增：高级搜索、筛选、分页状态
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [eraFilter, setEraFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4; // 每页展示4条，方便测试分页
+  const itemsPerPage = 4;
 
-  // 🌟 新增：专门记录哪些卡片的长评被展开了
   const [expandedReviews, setExpandedReviews] = useState<{
     [key: string]: boolean;
   }>({});
@@ -40,18 +70,20 @@ export default function FriendDetailPage({
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("*")
+        .select("username, display_name, bio, contact_info")
         .eq("id", friendId)
         .single();
       setFriendProfile(profile);
 
       const { data: fItems } = await supabase
         .from("user_items")
-        .select(`*, canonical_works ( canonical_id, title_zh, title_en )`)
+        .select(
+          `*, canonical_works ( canonical_id, title_zh, title_en, creator_name )`,
+        )
         .eq("user_id", friendId)
         .order("viewed_at", { ascending: false });
 
-      const cleanFriendItems = fItems || [];
+      const cleanFriendItems = (fItems || []) as unknown as FriendWorkItem[];
       setFriendItems(cleanFriendItems);
 
       const { data: myItems } = await supabase
@@ -60,9 +92,11 @@ export default function FriendDetailPage({
         .eq("user_id", me.id)
         .not("canonical_work_id", "is", null);
 
-      if (myItems && myItems.length > 0 && cleanFriendItems.length > 0) {
-        const intersection: any[] = [];
-        myItems.forEach((myItem) => {
+      const cleanMyItems = (myItems || []) as unknown as FriendWorkItem[];
+
+      if (cleanMyItems.length > 0 && cleanFriendItems.length > 0) {
+        const intersection: CommonItemMatch[] = [];
+        cleanMyItems.forEach((myItem) => {
           const match = cleanFriendItems.find(
             (fItem) => fItem.canonical_work_id === myItem.canonical_work_id,
           );
@@ -84,7 +118,6 @@ export default function FriendDetailPage({
     loadFriendData();
   }, [friendId, supabase]);
 
-  // 🌟 核心算法：前端多维度交叉过滤器
   const filteredItems = friendItems.filter((item) => {
     const titleZh = item.canonical_works?.title_zh || "";
     const titleEn = item.canonical_works?.title_en || "";
@@ -92,7 +125,6 @@ export default function FriendDetailPage({
     const creator = item.creator || "";
     const cid = item.canonical_works?.canonical_id || "";
 
-    // 1. 关键字模糊搜索（匹配中文名、英文名、原名、导演作者、ID）
     const matchesSearch =
       titleZh.toLowerCase().includes(searchQuery.toLowerCase()) ||
       titleEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -100,7 +132,6 @@ export default function FriendDetailPage({
       creator.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cid.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // 2. 评分段筛选
     let matchesRating = true;
     if (ratingFilter === "god") matchesRating = item.rating === 10;
     else if (ratingFilter === "high")
@@ -109,7 +140,6 @@ export default function FriendDetailPage({
       matchesRating = item.rating >= 6 && item.rating < 8;
     else if (ratingFilter === "low") matchesRating = item.rating < 6;
 
-    // 3. 10年一个年代筛选 (基于作品自身的上映/出版年份 year)
     let matchesEra = true;
     const year = item.year;
     if (year) {
@@ -119,22 +149,18 @@ export default function FriendDetailPage({
       else if (eraFilter === "90s") matchesEra = year >= 1990 && year < 2000;
       else if (eraFilter === "older") matchesEra = year < 1990;
     } else if (eraFilter !== "all") {
-      matchesEra = false; // 如果选了年代但作品没填年份，直接过滤掉
+      matchesEra = false;
     }
 
     return matchesSearch && matchesRating && matchesEra;
   });
 
-  // 🌟 分页切片计算
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentDisplayedItems = filteredItems.slice(
-    indexOfFirstItem,
-    indexOfLastItem,
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
   );
 
-  // 切换筛选时，自动将页码重置回第 1 页，防止溢出
   const handleFilterChange = (
     type: "search" | "rating" | "era",
     value: string,
@@ -143,10 +169,6 @@ export default function FriendDetailPage({
     if (type === "rating") setRatingFilter(value);
     if (type === "era") setEraFilter(value);
     setCurrentPage(1);
-  };
-
-  const toggleExpand = (itemId: string) => {
-    setExpandedReviews((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
   };
 
   if (loading)
@@ -164,7 +186,6 @@ export default function FriendDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* 朋友的头部名片 */}
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-slate-900 text-white font-bold text-lg flex items-center justify-center shadow-sm">
@@ -188,7 +209,7 @@ export default function FriendDetailPage({
             </p>
             {friendProfile.bio && (
               <p className="text-xs text-slate-500 mt-2 italic">
-                "{friendProfile.bio}"
+                “{friendProfile.bio}”
               </p>
             )}
           </div>
@@ -198,12 +219,15 @@ export default function FriendDetailPage({
         </Button>
       </div>
 
-      {/* 心有灵犀匹配区 */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-2xl text-white shadow-xl border border-slate-800">
         <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2">
           🧠 心有灵犀 · 共同归档匹配 ({commonItems.length})
         </h3>
-        {commonItems.length > 0 && (
+        {commonItems.length === 0 ? (
+          <p className="text-xs text-slate-400 mt-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800/60 text-center italic">
+            暂时还没有重合的权威归档。
+          </p>
+        ) : (
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {commonItems.map((match, i) => (
               <div
@@ -243,9 +267,7 @@ export default function FriendDetailPage({
         )}
       </div>
 
-      {/* 🌟 核心升级：控制面板（搜索 + 复合筛选） 🌟 */}
       <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-        {/* 关键字搜索输入框 */}
         <div className="md:col-span-2">
           <input
             type="text"
@@ -255,7 +277,6 @@ export default function FriendDetailPage({
             onChange={(e) => handleFilterChange("search", e.target.value)}
           />
         </div>
-        {/* 分数段筛选 */}
         <div>
           <select
             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
@@ -269,7 +290,6 @@ export default function FriendDetailPage({
             <option value="low">🗑️ 6分以下</option>
           </select>
         </div>
-        {/* 10年制年代筛选 */}
         <div>
           <select
             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
@@ -286,7 +306,6 @@ export default function FriendDetailPage({
         </div>
       </div>
 
-      {/* 列表渲染与长评折叠 */}
       <div className="space-y-6">
         <div className="flex justify-between items-center px-1">
           <h2 className="text-sm font-bold text-slate-800">
@@ -299,25 +318,24 @@ export default function FriendDetailPage({
 
         {currentDisplayedItems.length === 0 ? (
           <p className="text-xs text-slate-400 p-12 border border-dashed rounded-2xl text-center bg-white">
-            未找到符合当前搜索或筛选条件的归档条目。
+            未找到符合条件的归档条目。
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-6">
             {currentDisplayedItems.map((item) => {
-              const isLongReviewExpanded = expandedReviews[item.id] || false;
-              const hasLongReview = !!item.long_review;
-              // 字数超过120个字触发有条件折叠
-              const needsCollapse =
-                hasLongReview && item.long_review.length > 120;
-              const displayedLongReview =
-                needsCollapse && !isLongReviewExpanded
-                  ? `${item.long_review.slice(0, 120)}...`
+              const isExpanded = expandedReviews[item.id] || false;
+              const hasLong = !!item.long_review;
+              const isTooLong =
+                hasLong && (item.long_review?.length || 0) > 120;
+              const displayedLong =
+                isTooLong && !isExpanded
+                  ? `${item.long_review?.slice(0, 120)}...`
                   : item.long_review;
 
               return (
                 <div
                   key={item.id}
-                  className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
+                  className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between">
@@ -339,7 +357,6 @@ export default function FriendDetailPage({
                         </span>
                       )}
                     </h3>
-
                     <p className="text-xs text-slate-400 mt-0.5">
                       主创：
                       {item.canonical_works?.creator_name ||
@@ -353,34 +370,35 @@ export default function FriendDetailPage({
                     {item.short_review && (
                       <div className="mt-4">
                         <p className="text-xs font-medium text-slate-800 border-l-2 border-slate-200 pl-2">
-                          "{item.short_review}"
+                          “{item.short_review}”
                         </p>
                       </div>
                     )}
 
-                    {/* 🌟 升级：智能展开折叠的长评逻辑 🌟 */}
-                    {hasLongReview && (
+                    {hasLong && (
                       <div className="mt-4 pt-3 border-t border-slate-100/60">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
                           ✒️ 深度长评
                         </span>
                         <div className="bg-slate-50/60 border border-slate-100 p-4 rounded-xl text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-sans">
-                          {displayedLongReview}
+                          {displayedLong}
                         </div>
-                        {needsCollapse && (
+                        {isTooLong && (
                           <button
-                            onClick={() => toggleExpand(item.id)}
+                            onClick={() =>
+                              setExpandedReviews((p) => ({
+                                ...p,
+                                [item.id]: !p[item.id],
+                              }))
+                            }
                             className="mt-2 text-[11px] font-bold text-slate-900 hover:underline block ml-1"
                           >
-                            {isLongReviewExpanded
-                              ? "▲ 收起长评"
-                              : "▼ 展开全部长评"}
+                            {isExpanded ? "▲ 收起长评" : "▼ 展开全部长评"}
                           </button>
                         )}
                       </div>
                     )}
                   </div>
-
                   <div className="text-right mt-6 pt-2 border-t border-slate-50 text-[10px] text-slate-400">
                     标记于 {item.viewed_at}
                   </div>
@@ -390,7 +408,6 @@ export default function FriendDetailPage({
           </div>
         )}
 
-        {/* 🌟 新增：高颜值切页分页组件 🌟 */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-4 pt-4 border-t border-slate-100">
             <Button
@@ -398,7 +415,7 @@ export default function FriendDetailPage({
               size="sm"
               className="text-xs"
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             >
               ← 上一页
             </Button>
@@ -410,9 +427,7 @@ export default function FriendDetailPage({
               size="sm"
               className="text-xs"
               disabled={currentPage === totalPages}
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-              }
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
             >
               下一页 →
             </Button>
