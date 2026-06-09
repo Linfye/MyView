@@ -99,18 +99,18 @@ export default function FriendsPage() {
           return {
             id: aProf.id,
             username: aProf.username,
-            display_name: aProf.display_name,
+            display_name: aProf.display_name || "",
           };
         } else if (rProf) {
           return {
             id: rProf.id,
             username: rProf.username,
-            display_name: rProf.display_name,
+            display_name: rProf.display_name || "",
           };
         }
         return null;
       })
-      .filter((f): f is FriendProfileRow => f !== null && f.id !== userId);
+      .filter((f) => f !== null && f.id !== userId) as FriendProfileRow[];
 
     setPendingRequests(rawIncoming);
     setFriendsList(cleanFriends);
@@ -168,15 +168,13 @@ export default function FriendsPage() {
       return;
     }
 
-    const { error } = await supabase
-      .from("friendships")
-      .insert([
-        {
-          requester_id: currentUserId,
-          addressee_id: targetId,
-          status: "pending",
-        },
-      ]);
+    const { error } = await supabase.from("friendships").insert([
+      {
+        requester_id: currentUserId,
+        addressee_id: targetId,
+        status: "pending",
+      },
+    ]);
 
     if (error) {
       alert("发送申请失败：" + error.message);
