@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import WorksClientList from "@/components/WorksClientList"; // 引入我们即将抽离的高级客户端列表组件
+import WorksClientList from "@/components/WorksClientList";
 
 export default async function WorksPage() {
   const supabase = await createClient();
