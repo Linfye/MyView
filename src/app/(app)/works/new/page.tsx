@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 export default function NewWorkPage() {
-  const [type, setType] = useState("movie");
+  const [type, setType] = useState("movie"); // 'movie' 或 'book'
   const [title, setTitle] = useState("");
   const [creator, setCreator] = useState("");
   const [year, setYear] = useState("");
@@ -16,8 +16,10 @@ export default function NewWorkPage() {
   const [shortReview, setShortReview] = useState("");
   const [longReview, setLongReview] = useState("");
 
-  // 新增：时间与精度控制
-  const [timePrecision, setTimePrecision] = useState("day"); // 'day', 'month', 'year'
+  // 核心升级：通用权威 ID 状态
+  const [canonicalId, setCanonicalId] = useState("");
+
+  const [timePrecision, setTimePrecision] = useState("day");
   const [viewedDate, setViewedDate] = useState(
     new Date().toISOString().split("T")[0],
   );
@@ -35,18 +37,54 @@ export default function NewWorkPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    // 根据不同精度，规范化存储的日期字符串
     let finalizedDate = viewedDate;
     if (timePrecision === "year") {
-      finalizedDate = `${viewedDate.split("-")[0]}-01-01`; // 仅年份，统一归档到1月1日
+      finalizedDate = `${viewedDate.split("-")[0]}-01-01`;
     } else if (timePrecision === "month") {
       const parts = viewedDate.split("-");
-      finalizedDate = `${parts[0]}-${parts[1]}-01`; // 仅年月，统一归档到当月1日
+      finalizedDate = `${parts[0]}-${parts[1]}-01`;
     }
+
+    // --- 核心逻辑：权威 ID 查重与仅入库 ID ---
+    let canonicalWorkId = null;
+
+    if (canonicalId.trim()) {
+      // 1. 强制转换为纯大写字母
+      const cleanId = canonicalId.trim().toUpperCase();
+
+      // 2. 查重
+      const { data: existingCanonical } = await supabase
+        .from("canonical_works")
+        .select("id")
+        .eq("canonical_id", cleanId)
+        .single();
+
+      if (existingCanonical) {
+        canonicalWorkId = existingCanonical.id;
+      } else {
+        // 3. 如果不存在，只添加大写 ID 和类型，其余留给 Admin 补充
+        const { data: newCanonical, error: canonicalError } = await supabase
+          .from("canonical_works")
+          .insert([
+            {
+              canonical_id: cleanId,
+              type: type,
+            },
+          ])
+          .select("id")
+          .single();
+
+        if (!canonicalError && newCanonical) {
+          canonicalWorkId = newCanonical.id;
+        }
+      }
+    }
+    // ----------------------------------------
 
     const { error } = await supabase.from("user_items").insert([
       {
         user_id: user.id,
+        canonical_work_id: canonicalWorkId,
         type,
         title,
         creator,
@@ -85,18 +123,47 @@ export default function NewWorkPage() {
             <button
               type="button"
               className={`px-4 py-2 rounded-lg text-sm font-medium border ${type === "movie" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"}`}
-              onClick={() => setType("movie")}
+              onClick={() => {
+                setType("movie");
+                setCanonicalId("");
+              }}
             >
               🎬 电影 / 剧集
             </button>
             <button
               type="button"
               className={`px-4 py-2 rounded-lg text-sm font-medium border ${type === "book" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"}`}
-              onClick={() => setType("book")}
+              onClick={() => {
+                setType("book");
+                setCanonicalId("");
+              }}
             >
               📚 图书 / 文献
             </button>
           </div>
+        </div>
+
+        {/* 动态权威 ID 输入框 */}
+        <div className="p-4 bg-slate-950 rounded-xl text-white space-y-2 shadow-inner">
+          <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+            🌐 链接权威公共库{" "}
+            <span className="font-normal text-slate-500">(选填)</span>
+          </label>
+          <input
+            type="text"
+            className="w-full bg-slate-900 text-white border border-slate-800 rounded-lg p-2.5 text-sm focus:outline-none focus:border-slate-500 placeholder-slate-600 font-mono"
+            placeholder={
+              type === "movie"
+                ? "输入 IMDb ID (如: tt1375666)"
+                : "输入 Wikidata QID (如: Q13417184)"
+            }
+            value={canonicalId}
+            onChange={(e) => setCanonicalId(e.target.value)}
+          />
+          <p className="text-[10px] text-slate-500 leading-normal">
+            系统将强制保存为**大写字母**。如果该 ID
+            在公共库中不存在，系统将自动发起收录，由管理员后续补全其多语言元数据。
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -192,7 +259,6 @@ export default function NewWorkPage() {
           </div>
         </div>
 
-        {/* 核心升级：标记时间与任意精度选项 */}
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-xs font-semibold text-slate-500">
@@ -220,31 +286,10 @@ export default function NewWorkPage() {
               选择时间
             </label>
             <input
-              type={
-                timePrecision === "year"
-                  ? "number"
-                  : timePrecision === "month"
-                    ? "month"
-                    : "date"
-              }
+              type="date"
               className="w-full rounded-lg border bg-white p-2 text-sm focus:outline-none focus:border-slate-400 h-[38px]"
-              value={
-                timePrecision === "year"
-                  ? viewedDate.split("-")[0]
-                  : timePrecision === "month"
-                    ? viewedDate.slice(0, 7)
-                    : viewedDate
-              }
-              onChange={(e) => {
-                const val = e.target.value;
-                if (timePrecision === "year") {
-                  if (val.length === 4) setViewedDate(`${val}-01-01`);
-                } else if (timePrecision === "month") {
-                  setViewedDate(`${val}-01`);
-                } else {
-                  setViewedDate(val);
-                }
-              }}
+              value={viewedDate}
+              onChange={(e) => setViewedDate(e.target.value)}
             />
           </div>
         </div>

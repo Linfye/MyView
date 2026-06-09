@@ -15,15 +15,14 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 安全卫士：如果根本没登录，直接踢回登录页
   if (!user) {
     redirect("/login");
   }
 
-  // 2. 去我们的 profiles 表里，捞出这个用户的 display_name
+  // 2. 去 profiles 表里捞出用户的 display_name 还有全新的 is_admin 状态！
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, is_admin")
     .eq("id", user.id)
     .single();
 
@@ -32,7 +31,7 @@ export default async function AppLayout({
       {/* 顶部导航栏 */}
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
         <div className="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-6">
-          {/* 左侧 Logo 和 路由 */}
+          {/* 左侧 Logo 和 动态路由 */}
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center space-x-2">
               <span className="font-bold text-slate-900 tracking-tight text-lg">
@@ -41,7 +40,6 @@ export default async function AppLayout({
             </Link>
 
             <nav className="flex items-center gap-6 text-sm font-medium">
-              {/* 已更名为：数据统计 */}
               <Link
                 href="/dashboard"
                 className="transition-colors hover:text-slate-900 text-slate-600"
@@ -54,6 +52,16 @@ export default async function AppLayout({
               >
                 书影归档
               </Link>
+
+              {/* 🌟 核心升级：如果你是管理员，导航栏就会施展魔法，凭空多出一个专享入口 */}
+              {profile?.is_admin && (
+                <Link
+                  href="/admin"
+                  className="transition-colors text-amber-600 hover:text-amber-700 font-bold flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50"
+                >
+                  👑 维护公共库
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -63,7 +71,6 @@ export default async function AppLayout({
               你好，{profile?.display_name || "无名归档者"}
             </span>
 
-            {/* 退出登录表单 */}
             <form
               action={async () => {
                 "use server";
