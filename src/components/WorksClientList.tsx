@@ -93,9 +93,10 @@ export default function WorksClientList({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-        <div className="md:col-span-2">
+    <div className="space-y-4 md:space-y-6 px-1">
+      {/* 🌟 手机端自动重排：从纵向堆叠到全尺寸横向一行 🌟 */}
+      <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:grid sm:grid-cols-4 gap-3 items-center">
+        <div className="w-full sm:col-span-2">
           <input
             type="text"
             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400 font-sans"
@@ -104,7 +105,7 @@ export default function WorksClientList({
             onChange={(e) => handleFilterChange("search", e.target.value)}
           />
         </div>
-        <div>
+        <div className="w-full">
           <select
             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
             value={ratingFilter}
@@ -117,7 +118,7 @@ export default function WorksClientList({
             <option value="low">🗑️ 6分以下</option>
           </select>
         </div>
-        <div>
+        <div className="w-full">
           <select
             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
             value={eraFilter}
@@ -133,12 +134,14 @@ export default function WorksClientList({
         </div>
       </div>
 
+      {/* 列表流 */}
       {currentDisplayedItems.length === 0 ? (
         <div className="mt-8 text-center border border-dashed rounded-xl p-12 text-xs text-slate-400 bg-white">
           未找到匹配的归档记录。
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        /* 🌟 手机端纯单列瀑布流，iPad及PC自动开启优雅双列 🌟 */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {currentDisplayedItems.map((item) => {
             const isExpanded = expandedReviews[item.id] || false;
             const hasLong = !!item.long_review;
@@ -147,15 +150,15 @@ export default function WorksClientList({
             return (
               <div
                 key={item.id}
-                className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative"
+                className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">
+                      <span className="text-[11px] md:text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">
                         {item.type === "movie" ? "🎬 电影" : "📚 图书"}
                       </span>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-[11px] md:text-xs text-slate-400">
                         {item.visibility === "private" ? "🔒 私人" : "👥 密友"}
                       </span>
                     </div>
@@ -166,7 +169,8 @@ export default function WorksClientList({
                     </Link>
                   </div>
 
-                  <h3 className="text-base font-bold text-slate-900 mt-3">
+                  {/* 针对手机端收窄的字号处理 */}
+                  <h3 className="text-sm md:text-base font-bold text-slate-900 mt-3 break-all">
                     {item.canonical_works?.title_zh || item.title}
                     {item.year && (
                       <span className="text-xs font-normal text-slate-400 ml-1">
@@ -175,16 +179,16 @@ export default function WorksClientList({
                     )}
                   </h3>
                   {item.creator && (
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-[11px] md:text-xs text-slate-500 mt-0.5">
                       作者/导演：{item.creator}
                     </p>
                   )}
-                  <div className="text-xs font-bold text-amber-700 mt-2 bg-amber-50/60 border border-amber-100/50 w-max px-2 py-0.5 rounded-lg">
+                  <div className="text-[11px] md:text-xs font-bold text-amber-700 mt-2 bg-amber-50/60 border border-amber-100/50 w-max px-2 py-0.5 rounded-lg">
                     ⭐ {item.rating} / 10
                   </div>
 
                   {item.short_review && (
-                    <p className="text-sm font-medium text-slate-800 mt-3 border-l-2 border-slate-200 pl-2">
+                    <p className="text-xs md:text-sm font-medium text-slate-800 mt-3 border-l-2 border-slate-200 pl-2 break-all">
                       “{item.short_review}”
                     </p>
                   )}
@@ -194,8 +198,8 @@ export default function WorksClientList({
                       <span className="text-[10px] font-bold text-slate-400 block mb-1">
                         ✒️ 我的长评
                       </span>
-                      <div className="bg-slate-50 p-3 rounded-xl text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
-                        {isTooLong
+                      <div className="bg-slate-50 p-3 rounded-xl text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-all">
+                        {isTooLong && !isExpanded
                           ? `${item.long_review.slice(0, 120)}...`
                           : item.long_review}
                       </div>
@@ -215,7 +219,7 @@ export default function WorksClientList({
                     </div>
                   )}
                 </div>
-                <div className="text-right mt-6 pt-2 border-t border-slate-50 text-[10px] text-slate-400">
+                <div className="text-right mt-4 pt-2 border-t border-slate-50 text-[10px] text-slate-400">
                   标记于{" "}
                   {item.time_precision === "year"
                     ? `${new Date(item.viewed_at).getFullYear()}年`
@@ -229,12 +233,13 @@ export default function WorksClientList({
         </div>
       )}
 
+      {/* 分页控制自适应 */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-center gap-3 pt-4 border-t border-slate-100">
           <Button
             variant="outline"
             size="sm"
-            className="text-xs"
+            className="text-xs h-8 px-2.5"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
           >
@@ -246,7 +251,7 @@ export default function WorksClientList({
           <Button
             variant="outline"
             size="sm"
-            className="text-xs"
+            className="text-xs h-8 px-2.5"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
           >

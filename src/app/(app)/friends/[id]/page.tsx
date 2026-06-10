@@ -185,22 +185,23 @@ export default function FriendDetailPage({
     );
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-slate-900 text-white font-bold text-lg flex items-center justify-center shadow-sm">
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-8 px-1">
+      {/* 🌟 自适应头部名片：手机端上下排列缩窄，平板及PC左右排开 🌟 */}
+      <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-full bg-slate-900 text-white font-bold text-base md:text-lg flex items-center justify-center shadow-sm">
             {(friendProfile.display_name || friendProfile.username)
               .charAt(0)
               .toUpperCase()}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-base md:text-xl font-bold text-slate-900 truncate">
                 {friendProfile.display_name}
               </h1>
               {friendProfile.contact_info && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  📱 联络: {friendProfile.contact_info}
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 break-all">
+                  📱: {friendProfile.contact_info}
                 </span>
               )}
             </div>
@@ -208,19 +209,25 @@ export default function FriendDetailPage({
               @{friendProfile.username}
             </p>
             {friendProfile.bio && (
-              <p className="text-xs text-slate-500 mt-2 italic">
+              <p className="text-xs text-slate-500 mt-1 md:mt-2 italic break-all">
                 “{friendProfile.bio}”
               </p>
             )}
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs self-start sm:self-auto"
+          onClick={() => router.back()}
+        >
           返回密友圈
         </Button>
       </div>
 
-      <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-2xl text-white shadow-xl border border-slate-800">
-        <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2">
+      {/* 心有灵犀匹配区自适应 */}
+      <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-4 md:p-6 rounded-2xl text-white shadow-xl border border-slate-800">
+        <h3 className="text-xs md:text-sm font-bold text-slate-300 flex items-center gap-2">
           🧠 心有灵犀 · 共同归档匹配 ({commonItems.length})
         </h3>
         {commonItems.length === 0 ? (
@@ -228,11 +235,11 @@ export default function FriendDetailPage({
             暂时还没有重合的权威归档。
           </p>
         ) : (
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
             {commonItems.map((match, i) => (
               <div
                 key={i}
-                className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col justify-between"
+                className="p-3 md:p-4 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -243,11 +250,11 @@ export default function FriendDetailPage({
                       {match.canonicalId}
                     </code>
                   </div>
-                  <h4 className="text-sm font-bold text-slate-200 mt-1.5">
+                  <h4 className="text-xs md:text-sm font-bold text-slate-200 mt-1.5 break-all">
                     {match.title}
                   </h4>
                 </div>
-                <div className="flex items-center justify-between gap-4 mt-4 bg-slate-950/60 px-3 py-1.5 rounded-lg text-xs border border-slate-900">
+                <div className="flex items-center justify-between gap-4 mt-3 bg-slate-950/60 px-3 py-1.5 rounded-lg text-xs border border-slate-900">
                   <div className="text-slate-400">
                     我打：
                     <span className="font-bold text-amber-500">
@@ -267,8 +274,9 @@ export default function FriendDetailPage({
         )}
       </div>
 
-      <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-        <div className="md:col-span-2">
+      {/* 控制面板自适应 */}
+      <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:grid sm:grid-cols-4 gap-3 items-center">
+        <div className="w-full sm:col-span-2">
           <input
             type="text"
             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400 font-sans"
@@ -277,7 +285,7 @@ export default function FriendDetailPage({
             onChange={(e) => handleFilterChange("search", e.target.value)}
           />
         </div>
-        <div>
+        <div className="w-full">
           <select
             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
             value={ratingFilter}
@@ -290,7 +298,7 @@ export default function FriendDetailPage({
             <option value="low">🗑️ 6分以下</option>
           </select>
         </div>
-        <div>
+        <div className="w-full">
           <select
             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
             value={eraFilter}
@@ -306,12 +314,13 @@ export default function FriendDetailPage({
         </div>
       </div>
 
-      <div className="space-y-6">
+      {/* 归档流自适应 */}
+      <div className="space-y-4">
         <div className="flex justify-between items-center px-1">
-          <h2 className="text-sm font-bold text-slate-800">
+          <h2 className="text-xs md:text-sm font-bold text-slate-800">
             📖 归档记忆档案 ({filteredItems.length})
           </h2>
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[10px] text-slate-400">
             当前页展示 {currentDisplayedItems.length} 条
           </span>
         </div>
@@ -321,7 +330,7 @@ export default function FriendDetailPage({
             未找到符合条件的归档条目。
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-4 md:gap-6">
             {currentDisplayedItems.map((item) => {
               const isExpanded = expandedReviews[item.id] || false;
               const hasLong = !!item.long_review;
@@ -335,7 +344,7 @@ export default function FriendDetailPage({
               return (
                 <div
                   key={item.id}
-                  className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between"
+                  className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between">
@@ -349,7 +358,7 @@ export default function FriendDetailPage({
                       )}
                     </div>
 
-                    <h3 className="text-base font-bold text-slate-900 mt-3">
+                    <h3 className="text-sm md:text-base font-bold text-slate-900 mt-3 break-all">
                       {item.canonical_works?.title_zh || item.title}
                       {item.year && (
                         <span className="text-xs font-normal text-slate-400 ml-1">
@@ -357,19 +366,19 @@ export default function FriendDetailPage({
                         </span>
                       )}
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-[11px] md:text-xs text-slate-400 mt-0.5">
                       主创：
                       {item.canonical_works?.creator_name ||
                         item.creator ||
                         "未知"}
                     </p>
-                    <div className="text-xs font-bold text-amber-600 mt-2 bg-amber-50/60 border border-amber-100/50 w-max px-2 py-0.5 rounded">
+                    <div className="text-[11px] md:text-xs font-bold text-amber-600 mt-2 bg-amber-50/60 border border-amber-100/50 w-max px-2 py-0.5 rounded">
                       ⭐ {item.rating} / 10
                     </div>
 
                     {item.short_review && (
                       <div className="mt-4">
-                        <p className="text-xs font-medium text-slate-800 border-l-2 border-slate-200 pl-2">
+                        <p className="text-xs font-medium text-slate-800 border-l-2 border-slate-200 pl-2 break-all">
                           “{item.short_review}”
                         </p>
                       </div>
@@ -380,7 +389,7 @@ export default function FriendDetailPage({
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
                           ✒️ 深度长评
                         </span>
-                        <div className="bg-slate-50/60 border border-slate-100 p-4 rounded-xl text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-sans">
+                        <div className="bg-slate-50/60 border border-slate-100 p-3 md:p-4 rounded-xl text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-sans break-all">
                           {displayedLong}
                         </div>
                         {isTooLong && (
@@ -399,7 +408,7 @@ export default function FriendDetailPage({
                       </div>
                     )}
                   </div>
-                  <div className="text-right mt-6 pt-2 border-t border-slate-50 text-[10px] text-slate-400">
+                  <div className="text-right mt-4 pt-2 border-t border-slate-50 text-[10px] text-slate-400">
                     标记于 {item.viewed_at}
                   </div>
                 </div>
@@ -409,11 +418,11 @@ export default function FriendDetailPage({
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-4 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-center gap-3 pt-4 border-t border-slate-100">
             <Button
               variant="outline"
               size="sm"
-              className="text-xs"
+              className="text-xs h-8 px-2.5"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             >
@@ -425,7 +434,7 @@ export default function FriendDetailPage({
             <Button
               variant="outline"
               size="sm"
-              className="text-xs"
+              className="text-xs h-8 px-2.5"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
             >
