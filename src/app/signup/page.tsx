@@ -20,10 +20,18 @@ export default function SignUpPage() {
     setError(null);
     setLoading(true);
 
-    // 1. 调用 Supabase 注册账号
+    // 💡 获取当前浏览器的真实公网基础域名（如 https://mv.example.com），动态适配，彻底抛弃 localhost 记忆！
+    const currentOrigin =
+      typeof window !== "undefined" ? window.location.origin : "";
+
+    // 1. 调用 Supabase 注册账号，并显式绑定公网传送门
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        // 确保邮件里的确认按钮 100% 传送回当前公网网址下的 auth 回调
+        emailRedirectTo: `${currentOrigin}/auth/callback`,
+      },
     });
 
     if (signUpError) {
@@ -32,18 +40,21 @@ export default function SignUpPage() {
       return;
     }
 
-    // 2. 账号注册成功后，把用户名写进我们干净的 profiles 表里
+    // 2. 账号注册成功后！
+    // 因为数据库 Trigger 已经帮我们把空壳创建好了，我们前端现在只需要负责「更新」用户名即可！
     if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").insert([
-        {
-          id: data.user.id,
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
           username: username.toLowerCase(),
           display_name: username,
-        },
-      ]);
+        })
+        .eq("id", data.user.id); // 🔍 精准更新刚刚生成的这行名片
 
       if (profileError) {
-        setError("账号创建成功，但初始化用户资料失败：" + profileError.message);
+        setError(
+          "账号创建成功，但个性化用户名设置失败：" + profileError.message,
+        );
         setLoading(false);
         return;
       }
