@@ -3,6 +3,14 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import WorksClientList from "@/components/WorksClientList";
 
+type WorksListItem = React.ComponentProps<
+  typeof WorksClientList
+>["initialItems"][number];
+
+type RawWorkItem = Omit<WorksListItem, "canonical_works"> & {
+  canonical_works?: WorksListItem["canonical_works"] | WorksListItem["canonical_works"][];
+};
+
 export default async function WorksPage() {
   const supabase = await createClient();
   const {
@@ -31,6 +39,13 @@ export default async function WorksPage() {
     .eq("user_id", user?.id)
     .order("viewed_at", { ascending: false });
 
+  const normalizedItems = ((items || []) as RawWorkItem[]).map((item) => ({
+    ...item,
+    canonical_works: Array.isArray(item.canonical_works)
+      ? item.canonical_works[0] || null
+      : item.canonical_works || null,
+  }));
+
   return (
     <div className="space-y-6">
       {/* 头部动作栏 */}
@@ -47,7 +62,7 @@ export default async function WorksPage() {
       </div>
 
       {/* 将海量数据下发给高级交互过滤器 */}
-      <WorksClientList initialItems={items || []} />
+      <WorksClientList initialItems={normalizedItems} />
     </div>
   );
 }
