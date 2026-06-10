@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-// 🔒 核心防御密码：在组件外层声明一个全局标记锁，防止 React 严格模式下的双发并发请求
+// 🔒 核心锁：拦截 React 18/19 严格模式下的双发并发请求，杜绝第二次由于过期产生失效红框
 let isExchanging = false;
 
 function CallbackContent() {
@@ -26,37 +26,35 @@ function CallbackContent() {
         return;
       }
 
-      // 🛑 如果已经有一个请求在执行换取了，直接拦截拦截，不准跑第二次！
+      // 🛑 如果拦截锁已经是 true，说明正在处理第一发请求，直接优雅无视这第二发并发
       if (isExchanging) return;
       isExchanging = true;
 
-      // 💡 核心：拿着邮箱里的 code 密码向 Supabase 换取公网真实的登录令牌
+      // 💡 向 Supabase 后端服务器上缴解密 Code，换取正规的浏览器登录会话锁
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error("Token exchange failed:", error);
         setStatus("error");
-        isExchanging = false; // 只有彻底失败了才解锁，允许重试
+        isExchanging = false; // 只有彻底失败才解锁
       } else {
-        // 验证成功，开启倒计时沙漏
         setStatus("success");
       }
     }
 
     handleExchangeCode();
 
-    // 组件卸载时重置锁状态
     return () => {
-      isExchanging = false;
+      isExchanging = false; // 组件卸载时安全释放锁
     };
   }, [searchParams, supabase]);
 
-  // 🌟 倒计时核心时钟控制器
+  // 🌟 倒计时沙漏控制器
   useEffect(() => {
     if (status !== "success") return;
 
     if (countdown <= 0) {
-      // 倒计时归零，顺滑平移到看板
+      // 倒计时结束，丝滑推进主控面板
       router.push("/dashboard");
       router.refresh();
       return;
@@ -88,7 +86,6 @@ function CallbackContent() {
         {/* 2. 验证成功状态（名场面） */}
         {status === "success" && (
           <div className="space-y-4 animate-in fade-in zoom-in duration-300">
-            {/* 炫酷的动态大绿勾 */}
             <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-inner scale-110 transition-transform">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -123,7 +120,7 @@ function CallbackContent() {
           </div>
         )}
 
-        {/* 3. 令牌失效/过期状态 */}
+        {/* 3. 令牌失效/一洗而空状态 */}
         {status === "error" && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-100">
@@ -163,7 +160,6 @@ function CallbackContent() {
   );
 }
 
-// 💡 Next.js 15 强制要求：在客户端组件中使用 useSearchParams 必须包裹在 Suspense 里面！
 export default function CallbackPage() {
   return (
     <Suspense
