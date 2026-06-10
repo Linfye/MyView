@@ -33,6 +33,7 @@ export default function EditWorkPage({
 
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false); // 💡 新增：删除状态锁
   const router = useRouter();
   const supabase = createClient();
 
@@ -81,6 +82,27 @@ export default function EditWorkPage({
     }
     fetchItem();
   }, [id, supabase, router]);
+
+  // 💡 新增：核心删除逻辑
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `确定要彻底删除《${title}》的记忆档案吗？此操作不可撤销。`,
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+
+    const { error } = await supabase.from("user_items").delete().eq("id", id);
+
+    if (error) {
+      alert("删除失败：" + error.message);
+      setDeleting(false);
+      return;
+    }
+
+    router.push("/works");
+    router.refresh();
+  };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,9 +184,22 @@ export default function EditWorkPage({
     );
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-sm relative">
+      {/* 💡 顶层右上角：精美的危险区单项删除按钮 */}
+      <div className="absolute top-8 right-8">
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={loading || deleting}
+          onClick={handleDelete}
+          className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors h-8 rounded-lg px-3"
+        >
+          {deleting ? "正在抹除..." : "🗑️ 删除此记录"}
+        </Button>
+      </div>
+
       <h1 className="text-xl font-bold text-slate-900">编辑归档记录</h1>
-      <p className="text-sm text-slate-500 mt-1">
+      <p className="text-sm text-slate-500 mt-1 max-w-[75%]">
         正在修改《{title}》的记忆档案。
       </p>
 
@@ -368,10 +403,15 @@ export default function EditWorkPage({
         </div>
 
         <div className="flex gap-4 justify-end border-t pt-4">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading || deleting}
+            onClick={() => router.back()}
+          >
             取消
           </Button>
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading || deleting}>
             {loading ? "保存修改..." : "更新归档"}
           </Button>
         </div>

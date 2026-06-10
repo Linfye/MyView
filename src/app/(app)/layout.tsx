@@ -26,7 +26,7 @@ export default async function AppLayout({
     .eq("id", user.id)
     .single();
 
-  // 生成一个优雅的右上角圆形文字头像（截取昵称或用户名的第一个字，强制转为大写）
+  // 生成一个优雅的右上角圆形文字头像
   const initialLetter = (profile?.display_name || profile?.username || "M")
     .charAt(0)
     .toUpperCase();
@@ -64,6 +64,14 @@ export default async function AppLayout({
                 密友圈
               </Link>
 
+              {/* 💡 满足需求：在这里无缝嵌入关于页面 */}
+              <Link
+                href="/about"
+                className="transition-colors hover:text-slate-900 text-slate-600 font-medium flex items-center gap-1"
+              >
+                关于 MyView 📖
+              </Link>
+
               {profile?.is_admin && (
                 <Link
                   href="/admin"
@@ -75,9 +83,8 @@ export default async function AppLayout({
             </nav>
           </div>
 
-          {/* 🌟 右侧动态用户信息：整合头像与昵称点击 🌟 */}
+          {/* 右侧动态用户信息 */}
           <div className="flex items-center gap-4">
-            {/* 点击昵称或头像均能秒切进入设置页面 */}
             <Link
               href="/settings"
               className="flex items-center gap-2 group cursor-pointer"
@@ -86,7 +93,6 @@ export default async function AppLayout({
                 {profile?.display_name || "未命名用户"}
               </span>
 
-              {/* 精致的圆形文字头像 */}
               <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center border border-slate-200 shadow-sm group-hover:bg-slate-800 transition-colors">
                 {initialLetter}
               </div>
