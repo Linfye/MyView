@@ -268,7 +268,7 @@ export default function NewWorkPage() {
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
             >
-              <option value="friends">仅密友可见</option>
+              <option value="friends">仅朋友可见</option>
               <option value="private">仅自己可见</option>
             </select>
           </div>

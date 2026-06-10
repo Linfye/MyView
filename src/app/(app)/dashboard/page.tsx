@@ -50,7 +50,7 @@ export default async function DashboardPage() {
   const maxTimeCount = Math.max(...sortedTimeline.map((t) => t.count), 1);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-10">
+    <div className="mx-auto max-w-5xl space-y-6 p-1 sm:space-y-10 sm:p-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
           数据统计
@@ -61,7 +61,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* 基础统计卡片 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm flex flex-col justify-between">
           <div>
             <Film className="size-7 text-slate-800" />
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* 下方统计图表区 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-8">
         {/* 图表 1：评分数量与比例统计（横向柱状比例图） */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
           <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-1">

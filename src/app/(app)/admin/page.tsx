@@ -30,7 +30,7 @@ export default async function AdminDashboardPage() {
   // 3. 验证通过的硬核管理员，准许调取主库条目
   const { data: canonicalList } = await supabase
     .from("canonical_works")
-    .select("*")
+    .select("id, canonical_id, type, title_zh, title_en, creator_name, first_published_year, created_at")
     .order("created_at", { ascending: false });
 
   return (

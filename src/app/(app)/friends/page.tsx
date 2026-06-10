@@ -164,13 +164,13 @@ export default function FriendsPage() {
 
     const { data: existing } = await supabase
       .from("friendships")
-      .select("*")
+      .select("id")
       .or(
         `and(requester_id.eq.${currentUserId},addressee_id.eq.${targetId}),and(requester_id.eq.${targetId},addressee_id.eq.${currentUserId})`,
       );
 
     if (existing && existing.length > 0) {
-      notify("连线已存在", "这位用户已经是密友，或申请正在等待确认。", "info");
+      notify("连线已存在", "这位用户已经是朋友，或申请正在等待确认。", "info");
       setActionId(null);
       return;
     }
@@ -210,48 +210,48 @@ export default function FriendsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div className="max-w-5xl mx-auto grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
       <NoticeHost />
       <div className="md:col-span-1 space-y-6">
-        <div className="app-surface p-6 rounded-2xl">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-            <Search className="size-4" />
-            添加密友
+        <div className="app-surface p-5 rounded-2xl md:p-6">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <Search className="size-5" />
+            添加朋友
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-base text-slate-500 mt-1.5 leading-7">
             MyView 采用纯私密图谱，不支持公共模糊搜索。
           </p>
           <form onSubmit={handleSearch} className="mt-4 flex gap-2">
             <input
               type="text"
               required
-              className="flex-1 rounded-lg border p-2 text-xs focus:outline-none focus:border-slate-400 font-mono"
+              className="min-w-0 flex-1 rounded-lg border p-3 text-base focus:outline-none focus:border-slate-400 font-mono"
               placeholder="输入唯一用户名"
               value={searchUsername}
               onChange={(e) => setSearchUsername(e.target.value)}
             />
-            <Button type="submit" size="sm" className="text-xs">
+            <Button type="submit" className="h-11 px-4 text-base">
               搜索
             </Button>
           </form>
           {searchMessage && (
-            <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mt-3 border border-amber-100/50">
+            <p className="text-sm text-amber-700 bg-amber-50 p-2.5 rounded-lg mt-3 border border-amber-100/50">
               {searchMessage}
             </p>
           )}
           {searchResult && (
             <div className="mt-4 p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-slate-800">
+                <p className="text-base font-bold text-slate-800">
                   {searchResult.display_name}
                 </p>
-                <p className="text-[10px] font-mono text-slate-400">
+                <p className="text-sm font-mono text-slate-400">
                   @{searchResult.username}
                 </p>
               </div>
               <Button
                 size="sm"
-                className="text-xs h-7"
+                className="text-base h-10"
                 disabled={actionId === searchResult.id}
                 onClick={() => sendRequest(searchResult.id)}
               >
@@ -262,14 +262,14 @@ export default function FriendsPage() {
           )}
         </div>
 
-        <div className="app-surface p-6 rounded-2xl">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-            <Clock3 className="size-4" />
-            密友申请通知 ({pendingRequests.length})
+        <div className="app-surface p-5 rounded-2xl md:p-6">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <Clock3 className="size-5" />
+            朋友申请通知 ({pendingRequests.length})
           </h2>
           {pendingRequests.length === 0 ? (
-            <p className="text-xs text-slate-400 mt-3">
-              暂无收到的待确认密友申请。
+            <p className="text-sm text-slate-500 mt-3">
+              暂无收到的待确认朋友申请。
             </p>
           ) : (
             <div className="mt-4 space-y-3">
@@ -282,7 +282,7 @@ export default function FriendsPage() {
                     key={req.id}
                     className="p-3 bg-amber-50/50 rounded-xl border border-amber-100/50 flex flex-col gap-2"
                   >
-                    <div className="text-xs">
+                    <div className="text-base">
                       <span className="font-bold text-slate-800">
                         {prof?.display_name || "新朋友"}
                       </span>
@@ -293,7 +293,7 @@ export default function FriendsPage() {
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        className="text-[10px] h-6 flex-1 bg-slate-900 text-white"
+                        className="text-sm h-8 flex-1 bg-teal-700 text-white"
                         disabled={actionId === req.id}
                         onClick={() => respondRequest(req.id, true)}
                       >
@@ -302,7 +302,7 @@ export default function FriendsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-[10px] h-6 flex-1"
+                        className="text-sm h-8 flex-1"
                         disabled={actionId === req.id}
                         onClick={() => respondRequest(req.id, false)}
                       >
@@ -317,20 +317,20 @@ export default function FriendsPage() {
         </div>
       </div>
 
-      <div className="md:col-span-2 app-surface p-6 rounded-2xl">
-        <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-          <Users className="size-4" />
-          我的密友节点 ({friendsList.length})
+      <div className="md:col-span-2 app-surface p-5 rounded-2xl md:p-6">
+        <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
+          <Users className="size-5" />
+          我的朋友 ({friendsList.length})
         </h2>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p className="text-base text-slate-500 mt-1.5 leading-7">
           已建立双向信任链的朋友，点击可查看其公开授权的私人角落。
         </p>
         {loading ? (
-          <div className="text-center py-12 text-xs text-slate-400">
-            正在检索密友图谱...
+          <div className="text-center py-12 text-sm text-slate-400">
+            正在检索朋友图谱...
           </div>
         ) : friendsList.length === 0 ? (
-          <div className="mt-8 text-center border border-dashed rounded-xl p-12 text-xs text-slate-400 bg-slate-50/50">
+          <div className="mt-8 text-center border border-dashed rounded-xl p-12 text-sm text-slate-400 bg-slate-50/50">
             孤岛状态。目前还没有和任何人建立连线。
           </div>
         ) : (
@@ -338,13 +338,13 @@ export default function FriendsPage() {
             {friendsList.map((friend) => (
               <div
                 key={friend.id}
-                className="p-4 border border-slate-100 bg-slate-50/40 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors"
+                className="p-5 border border-slate-100 bg-slate-50/40 rounded-xl flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
               >
                 <div>
-                  <p className="text-sm font-bold text-slate-800">
+                  <p className="text-lg font-bold text-slate-800">
                     {friend.display_name || "未命名"}
                   </p>
-                  <p className="text-[10px] font-mono text-slate-400">
+                  <p className="text-sm font-mono text-slate-400">
                     @{friend.username}
                   </p>
                 </div>
@@ -352,7 +352,7 @@ export default function FriendsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-xs h-7 bg-white hover:bg-slate-900 hover:text-white transition-colors"
+                    className="text-base h-10 bg-white hover:bg-teal-700 hover:text-white transition-colors"
                   >
                     查看书影单
                   </Button>

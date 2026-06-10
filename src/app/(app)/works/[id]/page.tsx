@@ -55,7 +55,7 @@ export default async function WorkDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/works"
           prefetch={false}
@@ -88,7 +88,7 @@ export default async function WorkDetailPage({
             ) : (
               <Users className="size-3.5" />
             )}
-            {data.visibility === "private" ? "私人可见" : "密友可见"}
+            {data.visibility === "private" ? "私人可见" : "朋友可见"}
           </span>
           {canonical?.canonical_id && (
             <code className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
@@ -97,7 +97,7 @@ export default async function WorkDetailPage({
           )}
         </div>
 
-        <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-950">
+        <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
           {title}
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">

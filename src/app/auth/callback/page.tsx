@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AlertTriangle, CheckCircle2, Timer } from "lucide-react";
 
-// 全局标志锁
 let isExchanging = false;
 
 function CallbackContent() {
@@ -26,7 +25,6 @@ function CallbackContent() {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        console.log("检测到当前浏览器已存在合法会话，直接放行。");
         setStatus("success");
         return;
       }
@@ -40,23 +38,17 @@ function CallbackContent() {
       if (isExchanging) return;
       isExchanging = true;
 
-      // 呼叫 Supabase 后端交换 session。
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error("Token exchange failed:", error);
 
-        // 策略 2：万一报错，再次核对 Cookie 里的最新状态。
         const {
           data: { session: recheckSession },
         } = await supabase.auth.getSession();
         if (recheckSession) {
-          console.log(
-            "成功捕捉到 React 并发冲突引起的伪报错，强制纠正为成功状态。",
-          );
           setStatus("success");
         } else {
-          // 只有两轮核对都无会话，才真正弹红框
           setStatus("error");
           isExchanging = false;
         }
@@ -91,7 +83,6 @@ function CallbackContent() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(180deg,#f8fafc,#eef2f7)] p-6 font-sans">
       <div className="max-w-md w-full app-surface p-8 rounded-2xl text-center space-y-6">
-        {/* 加载中 */}
         {status === "loading" && (
           <div className="space-y-4">
             <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -127,7 +118,6 @@ function CallbackContent() {
           </div>
         )}
 
-        {/* 只有真正非登录失败才弹 */}
         {status === "error" && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-100">

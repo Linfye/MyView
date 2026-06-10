@@ -103,7 +103,7 @@ export default function WorksClientList({
   return (
     <div className="space-y-4 px-1">
       <div className="app-surface rounded-xl p-3">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_0.8fr_0.8fr_0.7fr_auto]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1.5fr_0.8fr_0.8fr_0.7fr_auto]">
           <input
             type="text"
             className="field-control h-9 text-sm"
@@ -177,7 +177,7 @@ export default function WorksClientList({
           未找到匹配的归档记录。
         </div>
       ) : viewMode === "cards" ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {currentDisplayedItems.map((item) => (
             <article
               key={item.id}
@@ -218,7 +218,7 @@ export default function WorksClientList({
                     ) : (
                       <Users className="size-3" />
                     )}
-                    {item.visibility === "private" ? "私人" : "密友"}
+                    {item.visibility === "private" ? "私人" : "朋友"}
                   </span>
                 </div>
                 {item.short_review && (
@@ -239,54 +239,56 @@ export default function WorksClientList({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/90">
-          <div className="grid grid-cols-[1.4fr_0.8fr_0.5fr_0.5fr_70px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500">
-            <span>作品</span>
-            <span>主创</span>
-            <span>类型</span>
-            <span>评分</span>
-            <span className="text-right">操作</span>
-          </div>
-          {currentDisplayedItems.map((item) => {
-            return (
-              <div
-                key={item.id}
-                className="grid grid-cols-[1.4fr_0.8fr_0.5fr_0.5fr_70px] gap-3 border-b border-slate-100 px-4 py-3 text-sm last:border-b-0 hover:bg-slate-50/80"
-              >
-                <Link
-                  href={`/works/${item.id}`}
-                  prefetch={false}
-                  className="min-w-0 font-medium text-slate-900 hover:text-teal-700"
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white/90">
+          <div className="min-w-[720px]">
+            <div className="grid grid-cols-[1.4fr_0.8fr_0.5fr_0.5fr_70px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500">
+              <span>作品</span>
+              <span>主创</span>
+              <span>类型</span>
+              <span>评分</span>
+              <span className="text-right">操作</span>
+            </div>
+            {currentDisplayedItems.map((item) => {
+              return (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[1.4fr_0.8fr_0.5fr_0.5fr_70px] gap-3 border-b border-slate-100 px-4 py-3 text-sm last:border-b-0 hover:bg-slate-50/80"
                 >
-                  <span className="block truncate">
-                    {item.canonical_works?.title_zh || item.title}
-                    {item.year ? ` (${item.year})` : ""}
-                  </span>
-                  {item.short_review && (
-                    <span className="mt-0.5 block truncate text-xs font-normal text-slate-500">
-                      {item.short_review}
+                  <Link
+                    href={`/works/${item.id}`}
+                    prefetch={false}
+                    className="min-w-0 font-medium text-slate-900 hover:text-teal-700"
+                  >
+                    <span className="block truncate">
+                      {item.canonical_works?.title_zh || item.title}
+                      {item.year ? ` (${item.year})` : ""}
                     </span>
-                  )}
-                </Link>
-                <span className="truncate text-slate-500">
-                  {item.creator || "未知"}
-                </span>
-                <span className="text-slate-500">
-                  {item.type === "movie" ? "电影" : "图书"}
-                </span>
-                <span className="font-semibold text-amber-700">
-                  {item.rating}
-                </span>
-                <Link
-                  href={`/works/${item.id}/edit`}
-                  prefetch={false}
-                  className="text-right text-xs font-medium text-slate-400 hover:text-slate-800"
-                >
-                  编辑
-                </Link>
-              </div>
-            );
-          })}
+                    {item.short_review && (
+                      <span className="mt-0.5 block truncate text-xs font-normal text-slate-500">
+                        {item.short_review}
+                      </span>
+                    )}
+                  </Link>
+                  <span className="truncate text-slate-500">
+                    {item.creator || "未知"}
+                  </span>
+                  <span className="text-slate-500">
+                    {item.type === "movie" ? "电影" : "图书"}
+                  </span>
+                  <span className="font-semibold text-amber-700">
+                    {item.rating}
+                  </span>
+                  <Link
+                    href={`/works/${item.id}/edit`}
+                    prefetch={false}
+                    className="text-right text-xs font-medium text-slate-400 hover:text-slate-800"
+                  >
+                    编辑
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

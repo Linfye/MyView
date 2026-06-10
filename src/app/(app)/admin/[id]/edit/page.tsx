@@ -15,8 +15,6 @@ export default function AdminEditCanonicalPage({
   const { id } = use(params);
 
   const [canonicalId, setCanonicalId] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [type, setType] = useState("movie");
   const [titleZh, setTitleZh] = useState("");
   const [titleEn, setTitleEn] = useState("");
   const [originalTitle, setOriginalTitle] = useState("");
@@ -35,7 +33,7 @@ export default function AdminEditCanonicalPage({
     async function fetchCanonical() {
       const { data, error } = await supabase
         .from("canonical_works")
-        .select("*")
+        .select("canonical_id, title_zh, title_en, original_title, creator_name, original_language, first_published_year")
         .eq("id", id)
         .single();
 
@@ -47,7 +45,6 @@ export default function AdminEditCanonicalPage({
 
       if (data) {
         setCanonicalId(data.canonical_id);
-        setType(data.type);
         setTitleZh(data.title_zh || "");
         setTitleEn(data.title_en || "");
         setOriginalTitle(data.original_title || "");

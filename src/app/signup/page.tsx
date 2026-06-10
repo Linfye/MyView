@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,7 +13,7 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,16 +21,13 @@ export default function SignUpPage() {
     setSuccessMessage(null);
     setLoading(true);
 
-    // 获取当前浏览器的真实公网基础域名（如 https://mv.example.com），动态适配
     const currentOrigin =
       typeof window !== "undefined" ? window.location.origin : "";
 
-    // 1. 调用 Supabase 注册账号
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        // 确保邮件里的确认按钮 100% 传送到当前公网网址下的 auth 回调页面
         emailRedirectTo: `${currentOrigin}/auth/callback`,
       },
     });
@@ -40,22 +38,14 @@ export default function SignUpPage() {
       return;
     }
 
-    // 2. 账号注册成功后
-    // 因为开启了邮箱验证，此时 data.user 存在，但他处于“未激活”状态。
-    // 我们在这里先静默把用户名写入 profiles 表。由于我们在数据库底层写了 "on conflict do nothing" 的触发器，
-    // 前端的这一次插入如果因为触发器抢跑而冲突，也不会导致后端崩溃。
     if (data.user) {
-      try {
-        await supabase.from("profiles").insert([
-          {
-            id: data.user.id,
-            username: username.toLowerCase(),
-            display_name: username,
-          },
-        ]);
-      } catch (err) {
-        console.log("Profile insert handled by trigger or skip:", err);
-      }
+      await supabase.from("profiles").insert([
+        {
+          id: data.user.id,
+          username: username.toLowerCase(),
+          display_name: username,
+        },
+      ]);
 
       setSuccessMessage(
         "注册申请提交成功。请前往您的电子邮箱查收激活信，点击链接即可开通账号。",
@@ -75,23 +65,9 @@ export default function SignUpPage() {
         </p>
 
         {successMessage ? (
-          // 邮件发送成功后的漂亮展示皮肤
           <div className="mt-6 text-center space-y-4 animate-in fade-in duration-300">
             <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto border border-blue-100">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 animate-pulse"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-2.25-1.5a2 2 0 00-2.22 0l-2.25 1.5"
-                />
-              </svg>
+              <MailCheck className="size-6" />
             </div>
             <p className="text-sm text-slate-600 font-medium leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
               {successMessage}
@@ -101,7 +77,6 @@ export default function SignUpPage() {
             </p>
           </div>
         ) : (
-          // 标准注册表单
           <form onSubmit={handleSignUp} className="mt-6 space-y-4">
             <div>
               <label className="text-xs font-semibold text-slate-500">

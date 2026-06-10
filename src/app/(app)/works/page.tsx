@@ -46,14 +46,14 @@ export default async function WorksPage() {
   return (
     <div className="space-y-6">
       {/* 头部动作栏 */}
-      <div className="flex items-center justify-between border-b pb-4">
+      <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">我的书影归档</h1>
           <p className="text-sm text-slate-500 mt-1">
             记录、复盘、封存属于你个人的精神自留地。
           </p>
         </div>
-        <Link href="/works/new" prefetch={false}>
+        <Link href="/works/new" prefetch={false} className="sm:shrink-0">
           <Button>+ 记录新书影</Button>
         </Link>
       </div>

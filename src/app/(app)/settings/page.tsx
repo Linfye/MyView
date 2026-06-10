@@ -34,7 +34,7 @@ export default function SettingsPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("*")
+        .select("username, display_name, bio, contact_info")
         .eq("id", user.id)
         .single();
 
@@ -138,11 +138,11 @@ export default function SettingsPage() {
     );
 
   return (
-    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 lg:grid-cols-[1fr_0.9fr]">
+    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 lg:grid-cols-[1fr_0.9fr]">
       <NoticeHost />
       <form
         onSubmit={handleUpdateProfile}
-        className="app-surface rounded-2xl p-7 space-y-5"
+        className="app-surface rounded-2xl p-5 space-y-5 sm:p-7"
       >
         <div>
           <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900 tracking-tight">
@@ -150,7 +150,7 @@ export default function SettingsPage() {
             个人资料设置
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            管理你的私人数字名片，密友间可见。
+            管理你的私人数字名片，朋友间可见。
           </p>
         </div>
 
@@ -194,7 +194,7 @@ export default function SettingsPage() {
             onChange={(e) => setContactInfo(e.target.value)}
           />
           <p className="text-[10px] text-slate-400 mt-1">
-            方便密友在其他平台精准锁定你并取得联系。
+            方便朋友在其他平台精准锁定你并取得联系。
           </p>
         </div>
 
@@ -220,7 +220,7 @@ export default function SettingsPage() {
 
       <form
         onSubmit={handleChangePassword}
-        className="app-surface rounded-2xl p-7 space-y-5"
+        className="app-surface rounded-2xl p-5 space-y-5 sm:p-7"
       >
         <div>
           <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
