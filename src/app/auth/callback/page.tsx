@@ -4,6 +4,9 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+// 🔒 核心防御密码：在组件外层声明一个全局标记锁，防止 React 严格模式下的双发并发请求
+let isExchanging = false;
+
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,12 +26,17 @@ function CallbackContent() {
         return;
       }
 
+      // 🛑 如果已经有一个请求在执行换取了，直接拦截拦截，不准跑第二次！
+      if (isExchanging) return;
+      isExchanging = true;
+
       // 💡 核心：拿着邮箱里的 code 密码向 Supabase 换取公网真实的登录令牌
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error("Token exchange failed:", error);
         setStatus("error");
+        isExchanging = false; // 只有彻底失败了才解锁，允许重试
       } else {
         // 验证成功，开启倒计时沙漏
         setStatus("success");
@@ -36,6 +44,11 @@ function CallbackContent() {
     }
 
     handleExchangeCode();
+
+    // 组件卸载时重置锁状态
+    return () => {
+      isExchanging = false;
+    };
   }, [searchParams, supabase]);
 
   // 🌟 倒计时核心时钟控制器
@@ -43,7 +56,7 @@ function CallbackContent() {
     if (status !== "success") return;
 
     if (countdown <= 0) {
-      // 倒计时归零，顺滑平移到看板（由于已经验证通过，这里直接进主页或看板，免去再次手动输入登录的繁琐！）
+      // 倒计时归零，顺滑平移到看板
       router.push("/dashboard");
       router.refresh();
       return;
