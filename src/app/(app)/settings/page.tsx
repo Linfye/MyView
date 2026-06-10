@@ -5,16 +5,21 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useAnimatedNotice } from "@/components/ui/animated-notice";
-import { Settings } from "lucide-react";
+import { KeyRound, Settings } from "lucide-react";
 
 export default function SettingsPage() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [contactInfo, setContactInfo] = useState("");
+  const [email, setEmail] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { notify, NoticeHost } = useAnimatedNotice();
@@ -25,6 +30,7 @@ export default function SettingsPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+      setEmail(user.email || "");
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -82,6 +88,48 @@ export default function SettingsPage() {
     router.refresh();
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordLoading) return;
+
+    if (newPassword.length < 6) {
+      notify("密码太短", "新密码至少需要 6 个字符。", "error");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      notify("两次密码不一致", "请重新输入新密码。", "error");
+      return;
+    }
+
+    setPasswordLoading(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: oldPassword,
+    });
+
+    if (signInError) {
+      notify("旧密码不正确", "请确认当前密码后再试。", "error");
+      setPasswordLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      notify("密码修改失败", error.message, "error");
+      setPasswordLoading(false);
+      return;
+    }
+
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordLoading(false);
+    notify("密码已更新", "下次登录请使用新密码。", "success");
+  };
+
   if (fetching)
     return (
       <div className="text-center py-12 text-sm text-slate-400">
@@ -90,19 +138,22 @@ export default function SettingsPage() {
     );
 
   return (
-    <div className="max-w-md mx-auto app-surface p-8 rounded-2xl">
+    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 lg:grid-cols-[1fr_0.9fr]">
       <NoticeHost />
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900 tracking-tight">
-          <Settings className="size-5" />
-          个人资料设置
-        </h1>
-        <p className="text-xs text-slate-500 mt-1">
-          在这里管理你的私人数字名片，密友间可见。
-        </p>
-      </div>
+      <form
+        onSubmit={handleUpdateProfile}
+        className="app-surface rounded-2xl p-7 space-y-5"
+      >
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900 tracking-tight">
+            <Settings className="size-5 text-teal-700" />
+            个人资料设置
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            管理你的私人数字名片，密友间可见。
+          </p>
+        </div>
 
-      <form onSubmit={handleUpdateProfile} className="mt-6 space-y-5">
         <div>
           <label className="text-xs font-semibold text-slate-500">
             唯一用户名 ID (Username)
@@ -163,6 +214,65 @@ export default function SettingsPage() {
         <div className="border-t pt-4 flex justify-end">
           <Button type="submit" disabled={loading}>
             {loading ? "正在保存..." : "保存修改"}
+          </Button>
+        </div>
+      </form>
+
+      <form
+        onSubmit={handleChangePassword}
+        className="app-surface rounded-2xl p-7 space-y-5"
+      >
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <KeyRound className="size-5 text-teal-700" />
+            修改密码
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            输入旧密码验证身份，然后设置新密码。
+          </p>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-slate-500">
+            当前密码
+          </label>
+          <input
+            type="password"
+            required
+            className="mt-1 w-full field-control"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">
+            新密码
+          </label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            className="mt-1 w-full field-control"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">
+            再次输入新密码
+          </label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            className="mt-1 w-full field-control"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        </div>
+        <div className="border-t pt-4 flex justify-end">
+          <Button type="submit" disabled={passwordLoading}>
+            {passwordLoading ? "正在更新..." : "更新密码"}
           </Button>
         </div>
       </form>

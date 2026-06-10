@@ -12,6 +12,7 @@ function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
+  const nextPath = searchParams.get("next") || "/works";
 
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
@@ -75,7 +76,7 @@ function CallbackContent() {
     if (status !== "success") return;
 
     if (countdown <= 0) {
-      router.push("/dashboard");
+      router.push(nextPath);
       router.refresh();
       return;
     }
@@ -85,7 +86,7 @@ function CallbackContent() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdown, status, router]);
+  }, [countdown, status, router, nextPath]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(180deg,#f8fafc,#eef2f7)] p-6 font-sans">
@@ -120,7 +121,7 @@ function CallbackContent() {
                 <span className="font-mono text-sm font-bold text-amber-400">
                   {countdown}
                 </span>{" "}
-                秒后自动开启看板
+                秒后自动继续
               </span>
             </div>
           </div>

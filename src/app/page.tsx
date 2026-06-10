@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[radial-gradient(circle_at_20%_10%,rgba(20,184,166,0.12),transparent_26rem),linear-gradient(135deg,#f8fafc_0%,#eef2f7_100%)] p-6 text-center font-sans">
       <div className="w-full max-w-xl space-y-8">
-        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-slate-950 text-lg font-black text-white shadow-lg shadow-slate-950/10">
+        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-teal-700 text-lg font-black text-white shadow-lg shadow-teal-900/10">
           M
         </div>
         <div className="space-y-3">
@@ -20,7 +20,7 @@ export default function Home() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <Link
             href="/login"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition-colors duration-150 hover:bg-slate-800"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-teal-900/10 transition-colors duration-150 hover:bg-teal-800"
           >
             <LogIn className="size-4" />
             立即登录

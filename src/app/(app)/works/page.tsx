@@ -1,11 +1,10 @@
 import Link from "next/link";
+import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import WorksClientList from "@/components/WorksClientList";
 
-type WorksListItem = React.ComponentProps<
-  typeof WorksClientList
->["initialItems"][number];
+type WorksListItem = ComponentProps<typeof WorksClientList>["initialItems"][number];
 
 type RawWorkItem = Omit<WorksListItem, "canonical_works"> & {
   canonical_works?: WorksListItem["canonical_works"] | WorksListItem["canonical_works"][];
@@ -14,8 +13,8 @@ type RawWorkItem = Omit<WorksListItem, "canonical_works"> & {
 export default async function WorksPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { data: items } = await supabase
     .from("user_items")
@@ -30,13 +29,11 @@ export default async function WorksPage() {
       status,
       visibility,
       short_review,
-      long_review,
       viewed_at,
-      time_precision,
       canonical_works ( canonical_id, title_zh, title_en )
     `,
     )
-    .eq("user_id", user?.id)
+    .eq("user_id", session?.user.id)
     .order("viewed_at", { ascending: false });
 
   const normalizedItems = ((items || []) as RawWorkItem[]).map((item) => ({

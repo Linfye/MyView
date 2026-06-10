@@ -22,7 +22,7 @@ export default function AboutPage() {
         </div>
 
         <div className="space-y-3 text-center">
-          <div className="mx-auto grid size-10 place-items-center rounded-xl bg-slate-950 text-white">
+          <div className="mx-auto grid size-10 place-items-center rounded-xl bg-teal-700 text-white">
             <Sparkles className="size-5" />
           </div>
           <h1 className="text-3xl font-black text-slate-950 tracking-tight">
@@ -72,7 +72,7 @@ export default function AboutPage() {
           <Link
             href="/dashboard"
             prefetch={false}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-colors duration-150"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold shadow-sm transition-colors duration-150"
           >
             进入我的看板
           </Link>

@@ -4,13 +4,13 @@ import { BookOpen, CalendarDays, Film, Star } from "lucide-react";
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { data: allItems } = await supabase
     .from("user_items")
     .select("type, rating, viewed_at")
-    .eq("user_id", user?.id);
+    .eq("user_id", session?.user.id);
 
   const movieCount =
     allItems?.filter((item) => item.type === "movie").length || 0;
