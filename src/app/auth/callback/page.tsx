@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-// 🔒 核心锁：拦截 React 18/19 严格模式下的双发并发请求，杜绝第二次由于过期产生失效红框
+// 全局标志锁
 let isExchanging = false;
 
 function CallbackContent() {
@@ -19,24 +19,45 @@ function CallbackContent() {
 
   useEffect(() => {
     async function handleExchangeCode() {
-      const code = searchParams.get("code");
+      // 🕵️‍♂️ 策略 1：首先检查当前浏览器是否已经处于登录状态（全网首创物理防重）
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        console.log("🎉 检测到当前浏览器已存在合法会话，直接放行绿勾！");
+        setStatus("success");
+        return;
+      }
 
+      const code = searchParams.get("code");
       if (!code) {
         setStatus("error");
         return;
       }
 
-      // 🛑 如果拦截锁已经是 true，说明正在处理第一发请求，直接优雅无视这第二发并发
       if (isExchanging) return;
       isExchanging = true;
 
-      // 💡 向 Supabase 后端服务器上缴解密 Code，换取正规的浏览器登录会话锁
+      // ⚡ 呼叫 Supabase 后端交换 session
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error("Token exchange failed:", error);
-        setStatus("error");
-        isExchanging = false; // 只有彻底失败才解锁
+
+        // 🕵️‍♂️ 策略 2：万一报错了，死马当活马医，再次去低延时核对一遍 Cookie 里的最新状态
+        const {
+          data: { session: recheckSession },
+        } = await supabase.auth.getSession();
+        if (recheckSession) {
+          console.log(
+            "🔒 成功捕捉到 React 并发冲突引起的伪报错，强制纠正为成功状态！",
+          );
+          setStatus("success");
+        } else {
+          // 只有两轮核对都无会话，才真正弹红框
+          setStatus("error");
+          isExchanging = false;
+        }
       } else {
         setStatus("success");
       }
@@ -45,16 +66,15 @@ function CallbackContent() {
     handleExchangeCode();
 
     return () => {
-      isExchanging = false; // 组件卸载时安全释放锁
+      isExchanging = false;
     };
   }, [searchParams, supabase]);
 
-  // 🌟 倒计时沙漏控制器
+  // 🌟 倒计时沙漏
   useEffect(() => {
     if (status !== "success") return;
 
     if (countdown <= 0) {
-      // 倒计时结束，丝滑推进主控面板
       router.push("/dashboard");
       router.refresh();
       return;
@@ -70,20 +90,20 @@ function CallbackContent() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6 font-sans">
       <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center space-y-6 transform transition-all">
-        {/* 1. 加载中状态 */}
+        {/* 加载中 */}
         {status === "loading" && (
           <div className="space-y-4">
             <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto"></div>
             <h2 className="text-lg font-bold text-slate-800">
-              正在解密您的文化记忆通道...
+              正在接入您的文化记忆归档...
             </h2>
             <p className="text-xs text-slate-400">
-              正在校验全球网络鉴权令牌，请稍候
+              正在为您下发全网安全数字令，请稍候
             </p>
           </div>
         )}
 
-        {/* 2. 验证成功状态（名场面） */}
+        {/* 验证成功（这一发绝对稳稳护住！） */}
         {status === "success" && (
           <div className="space-y-4 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-inner scale-110 transition-transform">
@@ -120,7 +140,7 @@ function CallbackContent() {
           </div>
         )}
 
-        {/* 3. 令牌失效/一洗而空状态 */}
+        {/* 只有真正非登录失败才弹 */}
         {status === "error" && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-100">
