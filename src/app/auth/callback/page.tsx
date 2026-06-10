@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { AlertTriangle, CheckCircle2, Timer } from "lucide-react";
 
 // 全局标志锁
 let isExchanging = false;
@@ -10,7 +11,7 @@ let isExchanging = false;
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
@@ -19,12 +20,12 @@ function CallbackContent() {
 
   useEffect(() => {
     async function handleExchangeCode() {
-      // 🕵️‍♂️ 策略 1：首先检查当前浏览器是否已经处于登录状态（全网首创物理防重）
+      // 策略 1：首先检查当前浏览器是否已经处于登录状态。
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        console.log("🎉 检测到当前浏览器已存在合法会话，直接放行绿勾！");
+        console.log("检测到当前浏览器已存在合法会话，直接放行。");
         setStatus("success");
         return;
       }
@@ -38,19 +39,19 @@ function CallbackContent() {
       if (isExchanging) return;
       isExchanging = true;
 
-      // ⚡ 呼叫 Supabase 后端交换 session
+      // 呼叫 Supabase 后端交换 session。
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error("Token exchange failed:", error);
 
-        // 🕵️‍♂️ 策略 2：万一报错了，死马当活马医，再次去低延时核对一遍 Cookie 里的最新状态
+        // 策略 2：万一报错，再次核对 Cookie 里的最新状态。
         const {
           data: { session: recheckSession },
         } = await supabase.auth.getSession();
         if (recheckSession) {
           console.log(
-            "🔒 成功捕捉到 React 并发冲突引起的伪报错，强制纠正为成功状态！",
+            "成功捕捉到 React 并发冲突引起的伪报错，强制纠正为成功状态。",
           );
           setStatus("success");
         } else {
@@ -70,7 +71,6 @@ function CallbackContent() {
     };
   }, [searchParams, supabase]);
 
-  // 🌟 倒计时沙漏
   useEffect(() => {
     if (status !== "success") return;
 
@@ -88,8 +88,8 @@ function CallbackContent() {
   }, [countdown, status, router]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6 font-sans">
-      <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center space-y-6 transform transition-all">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(180deg,#f8fafc,#eef2f7)] p-6 font-sans">
+      <div className="max-w-md w-full app-surface p-8 rounded-2xl text-center space-y-6">
         {/* 加载中 */}
         {status === "loading" && (
           <div className="space-y-4">
@@ -103,34 +103,20 @@ function CallbackContent() {
           </div>
         )}
 
-        {/* 验证成功（这一发绝对稳稳护住！） */}
         {status === "success" && (
           <div className="space-y-4 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-inner scale-110 transition-transform">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8 animate-bounce"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={3}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <CheckCircle2 className="size-8" />
             </div>
             <h2 className="text-xl font-black text-slate-900 tracking-tight">
-              🎉 邮箱验证成功！
+              邮箱验证成功
             </h2>
             <p className="text-sm text-slate-500 px-4">
               欢迎来到 MyView。您的专属安全数字秘钥已成功下发至当前浏览器。
             </p>
             <div className="pt-2">
               <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-semibold shadow-sm">
-                ⏳{" "}
+                <Timer className="size-3.5" />
                 <span className="font-mono text-sm font-bold text-amber-400">
                   {countdown}
                 </span>{" "}
@@ -144,20 +130,7 @@ function CallbackContent() {
         {status === "error" && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-100">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
+              <AlertTriangle className="size-8" />
             </div>
             <h2 className="text-lg font-bold text-slate-900">
               传送安全令已失效

@@ -2,6 +2,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import {
+  BookOpen,
+  ChartNoAxesColumn,
+  Settings,
+  Shield,
+  Users,
+} from "lucide-react";
 
 export default async function AppLayout({
   children,
@@ -32,68 +39,82 @@ export default async function AppLayout({
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* 顶部导航栏 */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_28rem),linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] flex flex-col">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
         <div className="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-6">
-          {/* 左侧 Logo 和 动态路由 */}
           <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center space-x-2">
-              <span className="font-bold text-slate-900 tracking-tight text-lg">
+            <Link
+              href="/works"
+              prefetch={false}
+              className="flex items-center space-x-2"
+            >
+              <span className="grid size-7 place-items-center rounded-lg bg-slate-950 text-xs font-black text-white">
+                M
+              </span>
+              <span className="font-bold text-slate-950 tracking-tight text-lg">
                 MyView
               </span>
             </Link>
 
             <nav className="flex items-center gap-6 text-sm font-medium">
               <Link
-                href="/dashboard"
-                className="transition-colors hover:text-slate-900 text-slate-600"
-              >
-                数据统计
-              </Link>
-              <Link
                 href="/works"
-                className="transition-colors hover:text-slate-900 text-slate-600"
+                prefetch={false}
+                className="flex items-center gap-1.5 text-slate-600 transition-colors hover:text-slate-950"
               >
+                <BookOpen className="size-4" />
                 书影归档
               </Link>
               <Link
-                href="/friends"
-                className="transition-colors hover:text-slate-900 text-slate-600"
+                href="/dashboard"
+                prefetch={false}
+                className="flex items-center gap-1.5 text-slate-600 transition-colors hover:text-slate-950"
               >
+                <ChartNoAxesColumn className="size-4" />
+                数据统计
+              </Link>
+              <Link
+                href="/friends"
+                prefetch={false}
+                className="flex items-center gap-1.5 text-slate-600 transition-colors hover:text-slate-950"
+              >
+                <Users className="size-4" />
                 密友圈
               </Link>
 
-              {/* 💡 满足需求：在这里无缝嵌入关于页面 */}
               <Link
                 href="/about"
-                className="transition-colors hover:text-slate-900 text-slate-600 font-medium flex items-center gap-1"
+                prefetch={false}
+                className="text-slate-600 transition-colors hover:text-slate-950"
               >
-                关于 MyView 📖
+                关于
               </Link>
 
               {profile?.is_admin && (
                 <Link
                   href="/admin"
-                  className="transition-colors text-amber-600 hover:text-amber-700 font-bold flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50"
+                  prefetch={false}
+                  className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100"
                 >
-                  👑 维护公共库
+                  <Shield className="size-3.5" />
+                  公共库
                 </Link>
               )}
             </nav>
           </div>
 
-          {/* 右侧动态用户信息 */}
           <div className="flex items-center gap-4">
             <Link
               href="/settings"
+              prefetch={false}
               className="flex items-center gap-2 group cursor-pointer"
             >
-              <span className="text-sm text-slate-600 font-medium group-hover:text-slate-900 transition-colors">
+              <Settings className="size-4 text-slate-400 transition-colors group-hover:text-slate-700" />
+              <span className="text-sm text-slate-600 font-medium group-hover:text-slate-950 transition-colors">
                 {profile?.display_name || "未命名用户"}
               </span>
 
-              <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center border border-slate-200 shadow-sm group-hover:bg-slate-800 transition-colors">
+              <div className="w-8 h-8 rounded-full bg-slate-950 text-white font-bold text-xs flex items-center justify-center border border-slate-200 shadow-sm group-hover:bg-slate-800 transition-colors">
                 {initialLetter}
               </div>
             </Link>
@@ -119,7 +140,6 @@ export default async function AppLayout({
         </div>
       </header>
 
-      {/* 页面主体内容 */}
       <main className="flex-1 container mx-auto max-w-screen-2xl px-6 py-6">
         {children}
       </main>

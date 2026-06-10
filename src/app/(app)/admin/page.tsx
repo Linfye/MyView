@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { redirect } from "next/navigation";
+import { BookOpen, Clock3, Film, ShieldCheck } from "lucide-react";
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
@@ -21,7 +22,7 @@ export default async function AdminDashboardPage() {
     .eq("id", user.id)
     .single();
 
-  // 🚨 【数据库级别防御】如果这个人在表里对应的 is_admin 不是 true，立刻无情弹走！
+  // 数据库级别防御：如果 profiles 里的 is_admin 不是 true，直接重定向。
   if (!profile || !profile.is_admin) {
     redirect("/");
   }
@@ -36,7 +37,10 @@ export default async function AdminDashboardPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-          👑 公共库维护后台
+          <span className="inline-flex items-center gap-2">
+            <ShieldCheck className="size-6" />
+            公共库维护后台
+          </span>
         </h1>
         <p className="text-sm text-slate-500 mt-1">
           管理员专属。在这里补充、校对由用户自发扩容触发的全球权威 ID 词条。
@@ -72,14 +76,22 @@ export default async function AdminDashboardPage() {
                         {work.canonical_id}
                       </code>
                       <span className="text-xs text-slate-400">
-                        {work.type === "movie" ? "🎬 电影" : "📚 图书"}
+                        <span className="inline-flex items-center gap-1">
+                          {work.type === "movie" ? (
+                            <Film className="size-3" />
+                          ) : (
+                            <BookOpen className="size-3" />
+                          )}
+                          {work.type === "movie" ? "电影" : "图书"}
+                        </span>
                       </span>
                     </div>
 
                     <div className="col-span-2">
                       {isPending ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                          ⏳ 待补充元数据 (壳词条)
+                          <Clock3 className="size-3.5" />
+                          待补充元数据 (壳词条)
                         </span>
                       ) : (
                         <div className="space-y-0.5">
@@ -97,7 +109,7 @@ export default async function AdminDashboardPage() {
                     </div>
 
                     <div className="text-right">
-                      <Link href={`/admin/${work.id}/edit`}>
+                      <Link href={`/admin/${work.id}/edit`} prefetch={false}>
                         <Button
                           variant="outline"
                           size="sm"

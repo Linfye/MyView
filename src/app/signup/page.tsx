@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -21,7 +20,7 @@ export default function SignUpPage() {
     setSuccessMessage(null);
     setLoading(true);
 
-    // 💡 获取当前浏览器的真实公网基础域名（如 https://mv.example.com），动态适配
+    // 获取当前浏览器的真实公网基础域名（如 https://mv.example.com），动态适配
     const currentOrigin =
       typeof window !== "undefined" ? window.location.origin : "";
 
@@ -42,7 +41,7 @@ export default function SignUpPage() {
     }
 
     // 2. 账号注册成功后
-    // 💡 注意：因为开启了邮箱验证，此时 data.user 存在，但他处于“未激活”状态。
+    // 因为开启了邮箱验证，此时 data.user 存在，但他处于“未激活”状态。
     // 我们在这里先静默把用户名写入 profiles 表。由于我们在数据库底层写了 "on conflict do nothing" 的触发器，
     // 前端的这一次插入如果因为触发器抢跑而冲突，也不会导致后端崩溃。
     if (data.user) {
@@ -58,9 +57,8 @@ export default function SignUpPage() {
         console.log("Profile insert handled by trigger or skip:", err);
       }
 
-      // 🌟 核心改动：展示成功提示，让用户去翻邮箱，不再直接切到 dashboard
       setSuccessMessage(
-        "🎉 注册申请提交成功！请立刻前往您的电子邮箱查收激活信，点击链接即可开通账号。",
+        "注册申请提交成功。请前往您的电子邮箱查收激活信，点击链接即可开通账号。",
       );
       setLoading(false);
     }

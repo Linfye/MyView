@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useAnimatedNotice } from "@/components/ui/animated-notice";
+import { Search, Users, Clock3, UserPlus } from "lucide-react";
 
 interface RequestProfile {
   username: string;
@@ -31,7 +33,7 @@ interface AcceptedFriendshipRow {
 }
 
 export default function FriendsPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [searchUsername, setSearchUsername] = useState("");
@@ -43,44 +45,33 @@ export default function FriendsPage() {
   const [pendingRequests, setPendingRequests] = useState<IncomingRequest[]>([]);
   const [friendsList, setFriendsList] = useState<FriendProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const { notify, NoticeHost } = useAnimatedNotice();
 
-  useEffect(() => {
-    async function init() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        // 显式传入进行调用，规避 ESLint 闭包依赖警告
-        fetchFriendshipsData(user.id);
-      }
-    }
-    init();
-  }, []);
-
-  async function fetchFriendshipsData(userId: string) {
+  const fetchFriendshipsData = useCallback(async (userId: string) => {
     setLoading(true);
 
-    const { data: incoming } = await supabase
-      .from("friendships")
-      .select(
-        `id, requester_id, profiles!friendships_requester_id_fkey ( username, display_name )`,
-      )
-      .eq("addressee_id", userId)
-      .eq("status", "pending");
-
-    const { data: acceptedRows } = await supabase
-      .from("friendships")
-      .select(
-        `
-        id,
-        requester_id,
-        addressee_id,
-        requester_profile:profiles!friendships_requester_id_fkey ( id, username, display_name ),
-        addressee_profile:profiles!friendships_addressee_id_fkey ( id, username, display_name )
-      `,
-      )
-      .eq("status", "accepted");
+    const [{ data: incoming }, { data: acceptedRows }] = await Promise.all([
+      supabase
+        .from("friendships")
+        .select(
+          `id, requester_id, profiles!friendships_requester_id_fkey ( username, display_name )`,
+        )
+        .eq("addressee_id", userId)
+        .eq("status", "pending"),
+      supabase
+        .from("friendships")
+        .select(
+          `
+          id,
+          requester_id,
+          addressee_id,
+          requester_profile:profiles!friendships_requester_id_fkey ( id, username, display_name ),
+          addressee_profile:profiles!friendships_addressee_id_fkey ( id, username, display_name )
+        `,
+        )
+        .eq("status", "accepted"),
+    ]);
 
     const rawIncoming = (incoming || []) as unknown as IncomingRequest[];
     const rawAccepted = (acceptedRows ||
@@ -115,7 +106,20 @@ export default function FriendsPage() {
     setPendingRequests(rawIncoming);
     setFriendsList(cleanFriends);
     setLoading(false);
-  }
+  }, [supabase]);
+
+  useEffect(() => {
+    async function init() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+        fetchFriendshipsData(user.id);
+      }
+    }
+    init();
+  }, [fetchFriendshipsData, supabase.auth]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,6 +159,8 @@ export default function FriendsPage() {
 
   const sendRequest = async (targetId: string) => {
     if (!currentUserId) return;
+    if (actionId) return;
+    setActionId(targetId);
 
     const { data: existing } = await supabase
       .from("friendships")
@@ -164,7 +170,8 @@ export default function FriendsPage() {
       );
 
     if (existing && existing.length > 0) {
-      alert("密友连线已存在，或申请正处于待确认状态。");
+      notify("连线已存在", "这位用户已经是密友，或申请正在等待确认。", "info");
+      setActionId(null);
       return;
     }
 
@@ -177,15 +184,18 @@ export default function FriendsPage() {
     ]);
 
     if (error) {
-      alert("发送申请失败：" + error.message);
+      notify("发送申请失败", error.message, "error");
     } else {
-      alert("申请成功，等待对方确认！");
+      notify("申请已发送", "等待对方确认后即可查看授权内容。", "success");
       setSearchResult(null);
       setSearchUsername("");
     }
+    setActionId(null);
   };
 
   const respondRequest = async (friendshipId: string, accept: boolean) => {
+    if (actionId) return;
+    setActionId(friendshipId);
     if (accept) {
       await supabase
         .from("friendships")
@@ -195,13 +205,19 @@ export default function FriendsPage() {
       await supabase.from("friendships").delete().eq("id", friendshipId);
     }
     if (currentUserId) await fetchFriendshipsData(currentUserId);
+    notify(accept ? "已接受申请" : "已忽略申请", undefined, "success");
+    setActionId(null);
   };
 
   return (
     <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+      <NoticeHost />
       <div className="md:col-span-1 space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <h2 className="text-sm font-bold text-slate-900">🔍 添加密友</h2>
+        <div className="app-surface p-6 rounded-2xl">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <Search className="size-4" />
+            添加密友
+          </h2>
           <p className="text-xs text-slate-400 mt-0.5">
             MyView 采用纯私密图谱，不支持公共模糊搜索。
           </p>
@@ -236,17 +252,20 @@ export default function FriendsPage() {
               <Button
                 size="sm"
                 className="text-xs h-7"
+                disabled={actionId === searchResult.id}
                 onClick={() => sendRequest(searchResult.id)}
               >
-                + 建立连线
+                <UserPlus className="size-3.5" />
+                {actionId === searchResult.id ? "发送中" : "建立连线"}
               </Button>
             </div>
           )}
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <h2 className="text-sm font-bold text-slate-900">
-            ⏳ 密友申请通知 ({pendingRequests.length})
+        <div className="app-surface p-6 rounded-2xl">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <Clock3 className="size-4" />
+            密友申请通知 ({pendingRequests.length})
           </h2>
           {pendingRequests.length === 0 ? (
             <p className="text-xs text-slate-400 mt-3">
@@ -275,6 +294,7 @@ export default function FriendsPage() {
                       <Button
                         size="sm"
                         className="text-[10px] h-6 flex-1 bg-slate-900 text-white"
+                        disabled={actionId === req.id}
                         onClick={() => respondRequest(req.id, true)}
                       >
                         接受
@@ -283,6 +303,7 @@ export default function FriendsPage() {
                         size="sm"
                         variant="outline"
                         className="text-[10px] h-6 flex-1"
+                        disabled={actionId === req.id}
                         onClick={() => respondRequest(req.id, false)}
                       >
                         忽略
@@ -296,9 +317,10 @@ export default function FriendsPage() {
         </div>
       </div>
 
-      <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-        <h2 className="text-sm font-bold text-slate-900">
-          👥 我的密友节点 ({friendsList.length})
+      <div className="md:col-span-2 app-surface p-6 rounded-2xl">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+          <Users className="size-4" />
+          我的密友节点 ({friendsList.length})
         </h2>
         <p className="text-xs text-slate-400 mt-0.5">
           已建立双向信任链的朋友，点击可查看其公开授权的私人角落。
@@ -326,7 +348,7 @@ export default function FriendsPage() {
                     @{friend.username}
                   </p>
                 </div>
-                <Link href={`/friends/${friend.id}`}>
+                <Link href={`/friends/${friend.id}`} prefetch={false}>
                   <Button
                     size="sm"
                     variant="outline"

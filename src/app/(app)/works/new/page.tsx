@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { useAnimatedNotice } from "@/components/ui/animated-notice";
+import { BookOpen, Film, Globe2 } from "lucide-react";
 
 export default function NewWorkPage() {
   const [type, setType] = useState("movie"); // 'movie' 或 'book'
@@ -27,15 +29,21 @@ export default function NewWorkPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { notify, NoticeHost } = useAnimatedNotice();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      notify("登录状态已失效", "请重新登录后再保存。", "error");
+      setLoading(false);
+      return;
+    }
 
     let finalizedDate = viewedDate;
     if (timePrecision === "year") {
@@ -100,17 +108,21 @@ export default function NewWorkPage() {
     ]);
 
     if (error) {
-      alert("保存失败：" + error.message);
+      notify("保存失败", error.message, "error");
       setLoading(false);
       return;
     }
 
-    router.push("/works");
-    router.refresh();
+    notify("已归档", "这条文化记忆已经保存。", "success");
+    window.setTimeout(() => {
+      router.push("/works");
+      router.refresh();
+    }, 520);
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+    <div className="max-w-2xl mx-auto app-surface p-8 rounded-2xl">
+      <NoticeHost />
       <h1 className="text-xl font-bold text-slate-900">添加新纪录</h1>
       <p className="text-sm text-slate-500 mt-1">归档你的文化足迹。</p>
 
@@ -122,23 +134,25 @@ export default function NewWorkPage() {
           <div className="flex gap-4">
             <button
               type="button"
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${type === "movie" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${type === "movie" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
               onClick={() => {
                 setType("movie");
                 setCanonicalId("");
               }}
             >
-              🎬 电影 / 剧集
+              <Film className="size-4" />
+              电影 / 剧集
             </button>
             <button
               type="button"
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${type === "book" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${type === "book" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
               onClick={() => {
                 setType("book");
                 setCanonicalId("");
               }}
             >
-              📚 图书 / 文献
+              <BookOpen className="size-4" />
+              图书 / 文献
             </button>
           </div>
         </div>
@@ -146,7 +160,8 @@ export default function NewWorkPage() {
         {/* 动态权威 ID 输入框 */}
         <div className="p-4 bg-slate-950 rounded-xl text-white space-y-2 shadow-inner">
           <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-            🌐 链接权威公共库{" "}
+            <Globe2 className="size-3.5" />
+            链接权威公共库{" "}
             <span className="font-normal text-slate-500">(选填)</span>
           </label>
           <input
@@ -220,12 +235,12 @@ export default function NewWorkPage() {
                 <option key={i} value={i}>
                   {i} 分{" "}
                   {i === 10
-                    ? "👑 神作"
+                    ? "神作"
                     : i >= 8
-                      ? "🔥 杰作"
+                      ? "杰作"
                       : i >= 6
-                        ? "👌 及格"
-                        : "🗑️ 糟糕"}
+                        ? "及格"
+                        : "糟糕"}
                 </option>
               ))}
             </select>
@@ -253,8 +268,8 @@ export default function NewWorkPage() {
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
             >
-              <option value="friends">👥 仅密友可见</option>
-              <option value="private">🔒 仅自己可见</option>
+              <option value="friends">仅密友可见</option>
+              <option value="private">仅自己可见</option>
             </select>
           </div>
         </div>

@@ -1,9 +1,20 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import {
+  BookOpen,
+  Brain,
+  ChevronDown,
+  ChevronUp,
+  Contact,
+  Film,
+  Library,
+  PenLine,
+  Star,
+} from "lucide-react";
 
 interface FriendWorkItem {
   id: string;
@@ -38,7 +49,7 @@ export default function FriendDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: friendId } = use(params);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   const [friendProfile, setFriendProfile] = useState<{
@@ -68,29 +79,43 @@ export default function FriendDetailPage({
       } = await supabase.auth.getUser();
       if (!me) return;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username, display_name, bio, contact_info")
-        .eq("id", friendId)
-        .single();
-      setFriendProfile(profile);
+      const [{ data: profile }, { data: fItems }, { data: myItems }] =
+        await Promise.all([
+          supabase
+            .from("profiles")
+            .select("username, display_name, bio, contact_info")
+            .eq("id", friendId)
+            .single(),
+          supabase
+            .from("user_items")
+            .select(
+              `
+              id,
+              type,
+              title,
+              creator,
+              year,
+              rating,
+              short_review,
+              long_review,
+              viewed_at,
+              canonical_work_id,
+              canonical_works ( canonical_id, title_zh, title_en, creator_name )
+            `,
+            )
+            .eq("user_id", friendId)
+            .order("viewed_at", { ascending: false }),
+          supabase
+            .from("user_items")
+            .select("rating, canonical_work_id, canonical_works ( canonical_id )")
+            .eq("user_id", me.id)
+            .not("canonical_work_id", "is", null),
+        ]);
 
-      const { data: fItems } = await supabase
-        .from("user_items")
-        .select(
-          `*, canonical_works ( canonical_id, title_zh, title_en, creator_name )`,
-        )
-        .eq("user_id", friendId)
-        .order("viewed_at", { ascending: false });
+      setFriendProfile(profile);
 
       const cleanFriendItems = (fItems || []) as unknown as FriendWorkItem[];
       setFriendItems(cleanFriendItems);
-
-      const { data: myItems } = await supabase
-        .from("user_items")
-        .select(`*, canonical_works ( canonical_id )`)
-        .eq("user_id", me.id)
-        .not("canonical_work_id", "is", null);
 
       const cleanMyItems = (myItems || []) as unknown as FriendWorkItem[];
 
@@ -186,8 +211,7 @@ export default function FriendDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto space-y-4 md:space-y-8 px-1">
-      {/* 🌟 自适应头部名片：手机端上下排列缩窄，平板及PC左右排开 🌟 */}
-      <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="app-surface p-4 md:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3 md:gap-4">
           <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-full bg-slate-900 text-white font-bold text-base md:text-lg flex items-center justify-center shadow-sm">
             {(friendProfile.display_name || friendProfile.username)
@@ -201,7 +225,8 @@ export default function FriendDetailPage({
               </h1>
               {friendProfile.contact_info && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 break-all">
-                  📱: {friendProfile.contact_info}
+                  <Contact className="size-3" />
+                  {friendProfile.contact_info}
                 </span>
               )}
             </div>
@@ -225,10 +250,10 @@ export default function FriendDetailPage({
         </Button>
       </div>
 
-      {/* 心有灵犀匹配区自适应 */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-4 md:p-6 rounded-2xl text-white shadow-xl border border-slate-800">
         <h3 className="text-xs md:text-sm font-bold text-slate-300 flex items-center gap-2">
-          🧠 心有灵犀 · 共同归档匹配 ({commonItems.length})
+          <Brain className="size-4" />
+          心有灵犀 · 共同归档匹配 ({commonItems.length})
         </h3>
         {commonItems.length === 0 ? (
           <p className="text-xs text-slate-400 mt-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800/60 text-center italic">
@@ -244,7 +269,14 @@ export default function FriendDetailPage({
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-slate-500">
-                      {match.type === "movie" ? "🎬 共同看过" : "📚 共同读过"}
+                      <span className="inline-flex items-center gap-1">
+                        {match.type === "movie" ? (
+                          <Film className="size-3" />
+                        ) : (
+                          <BookOpen className="size-3" />
+                        )}
+                        {match.type === "movie" ? "共同看过" : "共同读过"}
+                      </span>
                     </span>
                     <code className="text-[10px] font-mono text-slate-600 bg-slate-950 px-1 rounded">
                       {match.canonicalId}
@@ -274,12 +306,11 @@ export default function FriendDetailPage({
         )}
       </div>
 
-      {/* 控制面板自适应 */}
-      <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:grid sm:grid-cols-4 gap-3 items-center">
+      <div className="app-surface p-3 md:p-4 rounded-xl flex flex-col sm:grid sm:grid-cols-4 gap-3 items-center">
         <div className="w-full sm:col-span-2">
           <input
             type="text"
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400 font-sans"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-sans outline-none transition-colors focus:border-slate-400"
             placeholder="搜索作品名、导演作者、权威 ID..."
             value={searchQuery}
             onChange={(e) => handleFilterChange("search", e.target.value)}
@@ -287,24 +318,24 @@ export default function FriendDetailPage({
         </div>
         <div className="w-full">
           <select
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none transition-colors focus:border-slate-400"
             value={ratingFilter}
             onChange={(e) => handleFilterChange("rating", e.target.value)}
           >
-            <option value="all">⭐ 所有评分</option>
-            <option value="god">👑 10分 神作</option>
-            <option value="high">🔥 8-9分 杰作</option>
-            <option value="pass">👌 6-7分 及格</option>
-            <option value="low">🗑️ 6分以下</option>
+            <option value="all">所有评分</option>
+            <option value="god">10分 神作</option>
+            <option value="high">8-9分 杰作</option>
+            <option value="pass">6-7分 及格</option>
+            <option value="low">6分以下</option>
           </select>
         </div>
         <div className="w-full">
           <select
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none transition-colors focus:border-slate-400"
             value={eraFilter}
             onChange={(e) => handleFilterChange("era", e.target.value)}
           >
-            <option value="all">⏳ 所有时代</option>
+            <option value="all">所有时代</option>
             <option value="2020s">时代 2020s</option>
             <option value="2010s">时代 2010s</option>
             <option value="2000s">时代 2000s</option>
@@ -314,11 +345,11 @@ export default function FriendDetailPage({
         </div>
       </div>
 
-      {/* 归档流自适应 */}
       <div className="space-y-4">
         <div className="flex justify-between items-center px-1">
-          <h2 className="text-xs md:text-sm font-bold text-slate-800">
-            📖 归档记忆档案 ({filteredItems.length})
+          <h2 className="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-800">
+            <Library className="size-4" />
+            归档记忆档案 ({filteredItems.length})
           </h2>
           <span className="text-[10px] text-slate-400">
             当前页展示 {currentDisplayedItems.length} 条
@@ -344,12 +375,19 @@ export default function FriendDetailPage({
               return (
                 <div
                   key={item.id}
-                  className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between"
+                  className="app-surface p-4 md:p-6 rounded-2xl flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">
-                        {item.type === "movie" ? "🎬 电影" : "📚 图书"}
+                        <span className="inline-flex items-center gap-1">
+                          {item.type === "movie" ? (
+                            <Film className="size-3" />
+                          ) : (
+                            <BookOpen className="size-3" />
+                          )}
+                          {item.type === "movie" ? "电影" : "图书"}
+                        </span>
                       </span>
                       {item.canonical_works?.canonical_id && (
                         <code className="text-[10px] font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
@@ -372,8 +410,9 @@ export default function FriendDetailPage({
                         item.creator ||
                         "未知"}
                     </p>
-                    <div className="text-[11px] md:text-xs font-bold text-amber-600 mt-2 bg-amber-50/60 border border-amber-100/50 w-max px-2 py-0.5 rounded">
-                      ⭐ {item.rating} / 10
+                    <div className="inline-flex items-center gap-1 text-[11px] md:text-xs font-bold text-amber-600 mt-2 bg-amber-50/60 border border-amber-100/50 w-max px-2 py-0.5 rounded">
+                      <Star className="size-3 fill-amber-500 text-amber-500" />
+                      {item.rating} / 10
                     </div>
 
                     {item.short_review && (
@@ -387,7 +426,10 @@ export default function FriendDetailPage({
                     {hasLong && (
                       <div className="mt-4 pt-3 border-t border-slate-100/60">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                          ✒️ 深度长评
+                          <span className="inline-flex items-center gap-1">
+                            <PenLine className="size-3" />
+                            深度长评
+                          </span>
                         </span>
                         <div className="bg-slate-50/60 border border-slate-100 p-3 md:p-4 rounded-xl text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-sans break-all">
                           {displayedLong}
@@ -402,7 +444,17 @@ export default function FriendDetailPage({
                             }
                             className="mt-2 text-[11px] font-bold text-slate-900 hover:underline block ml-1"
                           >
-                            {isExpanded ? "▲ 收起长评" : "▼ 展开全部长评"}
+                            {isExpanded ? (
+                              <span className="inline-flex items-center gap-1">
+                                <ChevronUp className="size-3" />
+                                收起长评
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1">
+                                <ChevronDown className="size-3" />
+                                展开全部长评
+                              </span>
+                            )}
                           </button>
                         )}
                       </div>

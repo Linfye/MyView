@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { BookOpen, CalendarDays, Film, Star } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -6,23 +7,15 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 1. 基础数据拉取
-  const { count: movieCount } = await supabase
-    .from("user_items")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user?.id)
-    .eq("type", "movie");
-  const { count: bookCount } = await supabase
-    .from("user_items")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user?.id)
-    .eq("type", "book");
-
-  // 拉取用户的全量数据用于本地高性能数学统计
   const { data: allItems } = await supabase
     .from("user_items")
-    .select("rating, viewed_at")
+    .select("type, rating, viewed_at")
     .eq("user_id", user?.id);
+
+  const movieCount =
+    allItems?.filter((item) => item.type === "movie").length || 0;
+  const bookCount =
+    allItems?.filter((item) => item.type === "book").length || 0;
 
   const totalCount = allItems?.length || 0;
 
@@ -71,7 +64,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-2xl">🎬</span>
+            <Film className="size-7 text-slate-800" />
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2">
               已看电影 / 剧集
             </p>
@@ -84,7 +77,7 @@ export default async function DashboardPage() {
 
         <div className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-2xl">📚</span>
+            <BookOpen className="size-7 text-slate-800" />
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2">
               已读图书 / 文献
             </p>
@@ -100,8 +93,9 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* 图表 1：评分数量与比例统计（横向柱状比例图） */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-800 mb-1">
-            ⭐ 评分分布与比例
+          <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-1">
+            <Star className="size-4 fill-amber-500 text-amber-500" />
+            评分分布与比例
           </h3>
           <p className="text-xs text-slate-400 mb-6">统计各个分数的数量占比</p>
 
@@ -122,7 +116,7 @@ export default async function DashboardPage() {
                     <div className="flex-1 bg-slate-50 h-5 rounded-full overflow-hidden relative border border-slate-100">
                       {count > 0 && (
                         <div
-                          className="bg-slate-900 h-full rounded-full transition-all duration-500"
+                          className="bg-slate-900 h-full rounded-full transition-[width] duration-500"
                           style={{ width: `${percentage}%` }}
                         />
                       )}
@@ -142,8 +136,9 @@ export default async function DashboardPage() {
         {/* 图表 2：时间维度统计（纵向经典柱状图） */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-800 mb-1">
-              📅 归档动态趋势
+            <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-1">
+              <CalendarDays className="size-4" />
+              归档动态趋势
             </h3>
             <p className="text-xs text-slate-400 mb-6">
               按年月统计看过的电影与图书总量趋势（近6个月）
@@ -170,7 +165,7 @@ export default async function DashboardPage() {
                     </span>
                     {/* 柱子主体 */}
                     <div
-                      className="w-full bg-slate-900/90 rounded-t-lg group-hover:bg-slate-900 transition-all duration-500"
+                      className="w-full bg-slate-900/90 rounded-t-lg transition-[height,background-color] duration-500 group-hover:bg-slate-900"
                       style={{ height: `${Math.max(heightPercent, 4)}%` }} // 确保就算数据为0也有个小底座
                     />
                     {/* X轴刻度 */}

@@ -9,12 +9,22 @@ export default async function WorksPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 从数据库联合捞出当前用户的所有原始记录（包含绑定的公共库大写 ID）
   const { data: items } = await supabase
     .from("user_items")
     .select(
       `
-      *,
+      id,
+      type,
+      title,
+      creator,
+      year,
+      rating,
+      status,
+      visibility,
+      short_review,
+      long_review,
+      viewed_at,
+      time_precision,
       canonical_works ( canonical_id, title_zh, title_en )
     `,
     )
@@ -31,7 +41,7 @@ export default async function WorksPage() {
             记录、复盘、封存属于你个人的精神自留地。
           </p>
         </div>
-        <Link href="/works/new">
+        <Link href="/works/new" prefetch={false}>
           <Button>+ 记录新书影</Button>
         </Link>
       </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { BookOpen, ChevronDown, ChevronUp, Film, LockKeyhole, PenLine, Star, Users } from "lucide-react";
 
 interface WorkItem {
   id: string;
@@ -94,12 +95,11 @@ export default function WorksClientList({
 
   return (
     <div className="space-y-4 md:space-y-6 px-1">
-      {/* 🌟 手机端自动重排：从纵向堆叠到全尺寸横向一行 🌟 */}
-      <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:grid sm:grid-cols-4 gap-3 items-center">
+      <div className="app-surface p-3 md:p-4 rounded-xl flex flex-col sm:grid sm:grid-cols-4 gap-3 items-center">
         <div className="w-full sm:col-span-2">
           <input
             type="text"
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400 font-sans"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-sans outline-none transition-colors focus:border-slate-400"
             placeholder="搜索作品名、导演作者、权威 ID..."
             value={searchQuery}
             onChange={(e) => handleFilterChange("search", e.target.value)}
@@ -107,24 +107,24 @@ export default function WorksClientList({
         </div>
         <div className="w-full">
           <select
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none transition-colors focus:border-slate-400"
             value={ratingFilter}
             onChange={(e) => handleFilterChange("rating", e.target.value)}
           >
-            <option value="all">⭐ 所有评分</option>
-            <option value="god">👑 10分 神作</option>
-            <option value="high">🔥 8-9分 杰作</option>
-            <option value="pass">👌 6-7分 及格</option>
-            <option value="low">🗑️ 6分以下</option>
+            <option value="all">所有评分</option>
+            <option value="god">10分 神作</option>
+            <option value="high">8-9分 杰作</option>
+            <option value="pass">6-7分 及格</option>
+            <option value="low">6分以下</option>
           </select>
         </div>
         <div className="w-full">
           <select
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-slate-400"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none transition-colors focus:border-slate-400"
             value={eraFilter}
             onChange={(e) => handleFilterChange("era", e.target.value)}
           >
-            <option value="all">⏳ 所有时代</option>
+            <option value="all">所有时代</option>
             <option value="2020s">时代 2020s</option>
             <option value="2010s">时代 2010s</option>
             <option value="2000s">时代 2000s</option>
@@ -140,7 +140,6 @@ export default function WorksClientList({
           未找到匹配的归档记录。
         </div>
       ) : (
-        /* 🌟 手机端纯单列瀑布流，iPad及PC自动开启优雅双列 🌟 */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {currentDisplayedItems.map((item) => {
             const isExpanded = expandedReviews[item.id] || false;
@@ -150,26 +149,35 @@ export default function WorksClientList({
             return (
               <div
                 key={item.id}
-                className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative"
+                className="app-surface p-4 md:p-6 rounded-2xl flex flex-col justify-between transition-shadow duration-150 hover:shadow-[0_20px_70px_rgba(15,23,42,0.09)] relative"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] md:text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">
-                        {item.type === "movie" ? "🎬 电影" : "📚 图书"}
+                        {item.type === "movie" ? (
+                          <Film className="size-3" />
+                        ) : (
+                          <BookOpen className="size-3" />
+                        )}
+                        {item.type === "movie" ? "电影" : "图书"}
                       </span>
-                      <span className="text-[11px] md:text-xs text-slate-400">
-                        {item.visibility === "private" ? "🔒 私人" : "👥 密友"}
+                      <span className="inline-flex items-center gap-1 text-[11px] md:text-xs text-slate-400">
+                        {item.visibility === "private" ? (
+                          <LockKeyhole className="size-3" />
+                        ) : (
+                          <Users className="size-3" />
+                        )}
+                        {item.visibility === "private" ? "私人" : "密友"}
                       </span>
                     </div>
-                    <Link href={`/works/${item.id}/edit`}>
+                    <Link href={`/works/${item.id}/edit`} prefetch={false}>
                       <span className="text-xs text-slate-400 hover:text-slate-900 cursor-pointer border rounded px-1.5 py-0.5 bg-slate-50 hover:bg-slate-100 transition-colors">
                         编辑
                       </span>
                     </Link>
                   </div>
 
-                  {/* 针对手机端收窄的字号处理 */}
                   <h3 className="text-sm md:text-base font-bold text-slate-900 mt-3 break-all">
                     {item.canonical_works?.title_zh || item.title}
                     {item.year && (
@@ -183,8 +191,9 @@ export default function WorksClientList({
                       作者/导演：{item.creator}
                     </p>
                   )}
-                  <div className="text-[11px] md:text-xs font-bold text-amber-700 mt-2 bg-amber-50/60 border border-amber-100/50 w-max px-2 py-0.5 rounded-lg">
-                    ⭐ {item.rating} / 10
+                  <div className="inline-flex items-center gap-1 text-[11px] md:text-xs font-bold text-amber-700 mt-2 bg-amber-50/60 border border-amber-100/50 w-max px-2 py-0.5 rounded-lg">
+                    <Star className="size-3 fill-amber-500 text-amber-500" />
+                    {item.rating} / 10
                   </div>
 
                   {item.short_review && (
@@ -196,7 +205,10 @@ export default function WorksClientList({
                   {hasLong && item.long_review && (
                     <div className="mt-4 pt-3 border-t border-slate-100">
                       <span className="text-[10px] font-bold text-slate-400 block mb-1">
-                        ✒️ 我的长评
+                        <span className="inline-flex items-center gap-1">
+                          <PenLine className="size-3" />
+                          我的长评
+                        </span>
                       </span>
                       <div className="bg-slate-50 p-3 rounded-xl text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-all">
                         {isTooLong && !isExpanded
@@ -213,7 +225,17 @@ export default function WorksClientList({
                           }
                           className="mt-2 text-[10px] font-bold text-slate-800 hover:underline"
                         >
-                          {isExpanded ? "▲ 收起长评" : "▼ 展开全部"}
+                          {isExpanded ? (
+                            <span className="inline-flex items-center gap-1">
+                              <ChevronUp className="size-3" />
+                              收起长评
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <ChevronDown className="size-3" />
+                              展开全部
+                            </span>
+                          )}
                         </button>
                       )}
                     </div>

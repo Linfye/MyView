@@ -1,20 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { useAnimatedNotice } from "@/components/ui/animated-notice";
+import { Settings } from "lucide-react";
 
 export default function SettingsPage() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
-  const [contactInfo, setContactInfo] = useState(""); // 🌟 新增状态
+  const [contactInfo, setContactInfo] = useState("");
 
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { notify, NoticeHost } = useAnimatedNotice();
 
   useEffect(() => {
     async function loadProfile() {
@@ -33,7 +36,7 @@ export default function SettingsPage() {
         setUsername(profile.username);
         setDisplayName(profile.display_name || "");
         setBio(profile.bio || "");
-        setContactInfo(profile.contact_info || ""); // 🌟 回显联系方式
+        setContactInfo(profile.contact_info || "");
       }
       setFetching(false);
     }
@@ -42,12 +45,17 @@ export default function SettingsPage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      notify("登录状态已失效", "请重新登录后再保存。", "error");
+      setLoading(false);
+      return;
+    }
 
     const { error } = await supabase
       .from("profiles")
@@ -55,21 +63,21 @@ export default function SettingsPage() {
         username: username.trim().toLowerCase(),
         display_name: displayName.trim(),
         bio: bio.trim(),
-        contact_info: contactInfo.trim(), // 🌟 同步更新到数据库
+        contact_info: contactInfo.trim(),
       })
       .eq("id", user.id);
 
     if (error) {
       if (error.message.includes("unique")) {
-        alert("更新失败：该用户名已被他人占用，请换一个。");
+        notify("更新失败", "该用户名已被他人占用，请换一个。", "error");
       } else {
-        alert("更新失败：" + error.message);
+        notify("更新失败", error.message, "error");
       }
       setLoading(false);
       return;
     }
 
-    alert("资料修改成功！");
+    notify("资料已更新", "你的私人数字名片已经保存。", "success");
     setLoading(false);
     router.refresh();
   };
@@ -82,10 +90,12 @@ export default function SettingsPage() {
     );
 
   return (
-    <div className="max-w-md mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+    <div className="max-w-md mx-auto app-surface p-8 rounded-2xl">
+      <NoticeHost />
       <div>
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-          ⚙️ 个人资料设置
+        <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900 tracking-tight">
+          <Settings className="size-5" />
+          个人资料设置
         </h1>
         <p className="text-xs text-slate-500 mt-1">
           在这里管理你的私人数字名片，密友间可见。
@@ -121,7 +131,6 @@ export default function SettingsPage() {
           />
         </div>
 
-        {/* 🌟 新增表单项：外部联系方式 🌟 */}
         <div>
           <label className="text-xs font-semibold text-slate-500">
             外部联系方式 (可选)

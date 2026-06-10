@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { useAnimatedNotice } from "@/components/ui/animated-notice";
+import { PenLine } from "lucide-react";
 
 export default function AdminEditCanonicalPage({
   params,
@@ -25,7 +27,8 @@ export default function AdminEditCanonicalPage({
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { notify, NoticeHost } = useAnimatedNotice();
 
   // 1. 读取当前要编辑的权威词条
   useEffect(() => {
@@ -37,7 +40,7 @@ export default function AdminEditCanonicalPage({
         .single();
 
       if (error) {
-        alert("获取权威词条失败：" + error.message);
+        notify("获取权威词条失败", error.message, "error");
         router.push("/admin");
         return;
       }
@@ -57,7 +60,7 @@ export default function AdminEditCanonicalPage({
       setFetching(false);
     }
     fetchCanonical();
-  }, [id, supabase, router]);
+  }, [id, supabase, router, notify]);
 
   const handleAdminUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,13 +82,16 @@ export default function AdminEditCanonicalPage({
       .eq("id", id);
 
     if (error) {
-      alert("更新权威库失败：" + error.message);
+      notify("更新权威库失败", error.message, "error");
       setLoading(false);
       return;
     }
 
-    router.push("/admin");
-    router.refresh();
+    notify("权威词条已发布", "公共库元数据已经更新。", "success");
+    window.setTimeout(() => {
+      router.push("/admin");
+      router.refresh();
+    }, 520);
   };
 
   if (fetching)
@@ -96,10 +102,12 @@ export default function AdminEditCanonicalPage({
     );
 
   return (
-    <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+    <div className="max-w-xl mx-auto app-surface p-8 rounded-2xl space-y-6">
+      <NoticeHost />
       <div>
-        <h1 className="text-xl font-bold text-slate-900">
-          ✍️ 编纂权威文献元数据
+        <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900">
+          <PenLine className="size-5" />
+          编纂权威文献元数据
         </h1>
         <p className="text-xs text-slate-500 mt-1">
           正在为通用大写 ID{" "}

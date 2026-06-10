@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { useAnimatedNotice } from "@/components/ui/animated-notice";
+import { BookOpen, Film, Globe2, Trash2 } from "lucide-react";
 
 export default function EditWorkPage({
   params,
@@ -33,9 +35,10 @@ export default function EditWorkPage({
 
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [deleting, setDeleting] = useState(false); // 💡 新增：删除状态锁
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { notify, confirm, NoticeHost } = useAnimatedNotice();
 
   useEffect(() => {
     async function fetchItem() {
@@ -52,7 +55,7 @@ export default function EditWorkPage({
         .single();
 
       if (error) {
-        alert("获取数据失败：" + error.message);
+        notify("获取数据失败", error.message, "error");
         router.push("/works");
         return;
       }
@@ -81,13 +84,15 @@ export default function EditWorkPage({
       setFetching(false);
     }
     fetchItem();
-  }, [id, supabase, router]);
+  }, [id, supabase, router, notify]);
 
-  // 💡 新增：核心删除逻辑
   const handleDelete = async () => {
-    const confirmed = window.confirm(
-      `确定要彻底删除《${title}》的记忆档案吗？此操作不可撤销。`,
-    );
+    const confirmed = await confirm({
+      title: "删除这条归档？",
+      message: `确定要彻底删除《${title}》的记忆档案吗？此操作不可撤销。`,
+      confirmText: "删除",
+      dangerous: true,
+    });
     if (!confirmed) return;
 
     setDeleting(true);
@@ -95,17 +100,21 @@ export default function EditWorkPage({
     const { error } = await supabase.from("user_items").delete().eq("id", id);
 
     if (error) {
-      alert("删除失败：" + error.message);
+      notify("删除失败", error.message, "error");
       setDeleting(false);
       return;
     }
 
-    router.push("/works");
-    router.refresh();
+    notify("已删除", "这条归档已移除。", "success");
+    window.setTimeout(() => {
+      router.push("/works");
+      router.refresh();
+    }, 520);
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || deleting) return;
     setLoading(true);
 
     let finalizedDate = viewedDate;
@@ -167,13 +176,16 @@ export default function EditWorkPage({
       .eq("id", id);
 
     if (error) {
-      alert("更新失败：" + error.message);
+      notify("更新失败", error.message, "error");
       setLoading(false);
       return;
     }
 
-    router.push("/works");
-    router.refresh();
+    notify("已更新", "归档记录已经保存。", "success");
+    window.setTimeout(() => {
+      router.push("/works");
+      router.refresh();
+    }, 520);
   };
 
   if (fetching)
@@ -184,8 +196,8 @@ export default function EditWorkPage({
     );
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-sm relative">
-      {/* 💡 顶层右上角：精美的危险区单项删除按钮 */}
+    <div className="max-w-2xl mx-auto app-surface p-8 rounded-2xl relative">
+      <NoticeHost />
       <div className="absolute top-8 right-8">
         <Button
           type="button"
@@ -194,7 +206,14 @@ export default function EditWorkPage({
           onClick={handleDelete}
           className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors h-8 rounded-lg px-3"
         >
-          {deleting ? "正在抹除..." : "🗑️ 删除此记录"}
+          {deleting ? (
+            "正在删除..."
+          ) : (
+            <span className="inline-flex items-center gap-1.5">
+              <Trash2 className="size-3.5" />
+              删除此记录
+            </span>
+          )}
         </Button>
       </div>
 
@@ -211,23 +230,25 @@ export default function EditWorkPage({
           <div className="flex gap-4">
             <button
               type="button"
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${type === "movie" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${type === "movie" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
               onClick={() => {
                 setType("movie");
                 setCanonicalId("");
               }}
             >
-              🎬 电影 / 剧集
+              <Film className="size-4" />
+              电影 / 剧集
             </button>
             <button
               type="button"
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${type === "book" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${type === "book" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
               onClick={() => {
                 setType("book");
                 setCanonicalId("");
               }}
             >
-              📚 图书 / 文献
+              <BookOpen className="size-4" />
+              图书 / 文献
             </button>
           </div>
         </div>
@@ -235,7 +256,8 @@ export default function EditWorkPage({
         {/* 编辑状态下的动态权威 ID 框 */}
         <div className="p-4 bg-slate-950 rounded-xl text-white space-y-2 shadow-inner">
           <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-            🌐 链接权威公共库{" "}
+            <Globe2 className="size-3.5" />
+            链接权威公共库{" "}
             <span className="font-normal text-slate-500">
               (选填/可编辑修改)
             </span>
@@ -304,12 +326,12 @@ export default function EditWorkPage({
                 <option key={i} value={i}>
                   {i} 分{" "}
                   {i === 10
-                    ? "👑 神作"
+                    ? "神作"
                     : i >= 8
-                      ? "🔥 杰作"
+                      ? "杰作"
                       : i >= 6
-                        ? "👌 及格"
-                        : "🗑️ 糟糕"}
+                        ? "及格"
+                        : "糟糕"}
                 </option>
               ))}
             </select>
@@ -337,8 +359,8 @@ export default function EditWorkPage({
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
             >
-              <option value="friends">👥 仅密友可见</option>
-              <option value="private">🔒 仅自己可见</option>
+              <option value="friends">仅密友可见</option>
+              <option value="private">仅自己可见</option>
             </select>
           </div>
         </div>
