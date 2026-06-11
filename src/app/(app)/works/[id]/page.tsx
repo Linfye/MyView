@@ -88,7 +88,7 @@ export default async function WorkDetailPage({
             ) : (
               <Users className="size-3.5" />
             )}
-            {data.visibility === "private" ? "私人可见" : "朋友可见"}
+            {data.visibility === "private" ? "私人可见" : "公开展示"}
           </span>
           {canonical?.canonical_id && (
             <code className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">

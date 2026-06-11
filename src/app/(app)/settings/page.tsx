@@ -150,7 +150,7 @@ export default function SettingsPage() {
             个人资料设置
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            管理你的私人数字名片，朋友间可见。
+            管理你的公开用户名片与个人资料。
           </p>
         </div>
 
@@ -194,7 +194,7 @@ export default function SettingsPage() {
             onChange={(e) => setContactInfo(e.target.value)}
           />
           <p className="text-[10px] text-slate-400 mt-1">
-            方便朋友在其他平台精准锁定你并取得联系。
+            方便他人在其他平台精准锁定你并取得联系。
           </p>
         </div>
 

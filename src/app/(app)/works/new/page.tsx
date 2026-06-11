@@ -5,10 +5,23 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useAnimatedNotice } from "@/components/ui/animated-notice";
-import { BookOpen, Film, Globe2 } from "lucide-react";
+import { BookOpen, CalendarDays, Clock3, Film, Globe2 } from "lucide-react";
+
+type TimeMode = "now" | "custom";
+type TimePrecision = "minute" | "day" | "month" | "year";
+
+function toLocalMinuteValue(date = new Date()) {
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60_000);
+  return localDate.toISOString().slice(0, 16);
+}
+
+function toLocalDateValue(date = new Date()) {
+  return toLocalMinuteValue(date).slice(0, 10);
+}
 
 export default function NewWorkPage() {
-  const [type, setType] = useState("movie"); // 'movie' 或 'book'
+  const [type, setType] = useState("movie");
   const [title, setTitle] = useState("");
   const [creator, setCreator] = useState("");
   const [year, setYear] = useState("");
@@ -18,13 +31,13 @@ export default function NewWorkPage() {
   const [shortReview, setShortReview] = useState("");
   const [longReview, setLongReview] = useState("");
 
-  // 核心升级：通用权威 ID 状态
   const [canonicalId, setCanonicalId] = useState("");
 
-  const [timePrecision, setTimePrecision] = useState("day");
-  const [viewedDate, setViewedDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const [timeMode, setTimeMode] = useState<TimeMode>("now");
+  const [timePrecision, setTimePrecision] = useState<TimePrecision>("day");
+  const [customDate, setCustomDate] = useState(toLocalDateValue());
+  const [customMonth, setCustomMonth] = useState(toLocalDateValue().slice(0, 7));
+  const [customYear, setCustomYear] = useState(toLocalDateValue().slice(0, 4));
 
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -45,22 +58,32 @@ export default function NewWorkPage() {
       return;
     }
 
-    let finalizedDate = viewedDate;
-    if (timePrecision === "year") {
-      finalizedDate = `${viewedDate.split("-")[0]}-01-01`;
-    } else if (timePrecision === "month") {
-      const parts = viewedDate.split("-");
-      finalizedDate = `${parts[0]}-${parts[1]}-01`;
-    }
+    const finalizedTime =
+      timeMode === "now"
+        ? {
+            viewedAt: toLocalMinuteValue(),
+            precision: "minute" as TimePrecision,
+          }
+        : timePrecision === "year"
+          ? {
+              viewedAt: `${customYear || toLocalDateValue().slice(0, 4)}-01-01`,
+              precision: "year" as TimePrecision,
+            }
+          : timePrecision === "month"
+            ? {
+                viewedAt: `${customMonth || toLocalDateValue().slice(0, 7)}-01`,
+                precision: "month" as TimePrecision,
+              }
+            : {
+                viewedAt: customDate || toLocalDateValue(),
+                precision: "day" as TimePrecision,
+              };
 
-    // --- 核心逻辑：权威 ID 查重与仅入库 ID ---
     let canonicalWorkId = null;
 
     if (canonicalId.trim()) {
-      // 1. 强制转换为纯大写字母
       const cleanId = canonicalId.trim().toUpperCase();
 
-      // 2. 查重
       const { data: existingCanonical } = await supabase
         .from("canonical_works")
         .select("id")
@@ -70,7 +93,6 @@ export default function NewWorkPage() {
       if (existingCanonical) {
         canonicalWorkId = existingCanonical.id;
       } else {
-        // 3. 如果不存在，只添加大写 ID 和类型，其余留给 Admin 补充
         const { data: newCanonical, error: canonicalError } = await supabase
           .from("canonical_works")
           .insert([
@@ -87,7 +109,6 @@ export default function NewWorkPage() {
         }
       }
     }
-    // ----------------------------------------
 
     const { error } = await supabase.from("user_items").insert([
       {
@@ -102,8 +123,8 @@ export default function NewWorkPage() {
         visibility,
         short_review: shortReview,
         long_review: longReview,
-        viewed_at: finalizedDate,
-        time_precision: timePrecision,
+        viewed_at: finalizedTime.viewedAt,
+        time_precision: finalizedTime.precision,
       },
     ]);
 
@@ -121,20 +142,20 @@ export default function NewWorkPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto app-surface p-8 rounded-2xl">
+    <div className="max-w-3xl mx-auto app-surface p-5 rounded-2xl sm:p-8">
       <NoticeHost />
       <h1 className="text-xl font-bold text-slate-900">添加新纪录</h1>
       <p className="text-sm text-slate-500 mt-1">归档你的文化足迹。</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-6">
         <div>
-          <label className="text-xs font-semibold text-slate-500 block mb-2">
+          <label className="text-sm font-semibold text-slate-500 block mb-2">
             分类
           </label>
           <div className="flex gap-4">
             <button
               type="button"
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${type === "movie" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${type === "movie" ? "bg-teal-700 text-white border-teal-700" : "bg-white text-slate-600 border-slate-200 hover:bg-teal-50 hover:text-teal-800"}`}
               onClick={() => {
                 setType("movie");
                 setCanonicalId("");
@@ -145,7 +166,7 @@ export default function NewWorkPage() {
             </button>
             <button
               type="button"
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${type === "book" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${type === "book" ? "bg-teal-700 text-white border-teal-700" : "bg-white text-slate-600 border-slate-200 hover:bg-teal-50 hover:text-teal-800"}`}
               onClick={() => {
                 setType("book");
                 setCanonicalId("");
@@ -157,16 +178,15 @@ export default function NewWorkPage() {
           </div>
         </div>
 
-        {/* 动态权威 ID 输入框 */}
-        <div className="p-4 bg-slate-950 rounded-xl text-white space-y-2 shadow-inner">
-          <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+        <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4 space-y-2">
+          <label className="text-sm font-bold text-teal-900 flex items-center gap-1.5">
             <Globe2 className="size-3.5" />
             链接权威公共库{" "}
-            <span className="font-normal text-slate-500">(选填)</span>
+            <span className="font-normal text-teal-700/70">(选填)</span>
           </label>
           <input
             type="text"
-            className="w-full bg-slate-900 text-white border border-slate-800 rounded-lg p-2.5 text-sm focus:outline-none focus:border-slate-500 placeholder-slate-600 font-mono"
+            className="w-full rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-slate-900 placeholder-slate-400 font-mono outline-none transition-colors focus:border-teal-500"
             placeholder={
               type === "movie"
                 ? "输入 IMDb ID (如: tt1375666)"
@@ -175,8 +195,8 @@ export default function NewWorkPage() {
             value={canonicalId}
             onChange={(e) => setCanonicalId(e.target.value)}
           />
-          <p className="text-[10px] text-slate-500 leading-normal">
-            系统将强制保存为**大写字母**。如果该 ID
+          <p className="text-sm text-teal-800/75 leading-6">
+            系统会保存为大写字母。如果该 ID
             在公共库中不存在，系统将自动发起收录，由管理员后续补全其多语言元数据。
           </p>
         </div>
@@ -268,23 +288,65 @@ export default function NewWorkPage() {
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
             >
-              <option value="friends">仅朋友可见</option>
+              <option value="friends">公开展示</option>
               <option value="private">仅自己可见</option>
             </select>
           </div>
         </div>
 
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-slate-500">
-              时间记录精度
+            <label className="text-sm font-semibold text-slate-600">
+              记录时间
             </label>
-            <div className="flex gap-2 mt-1">
-              {["day", "month", "year"].map((p) => (
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  timeMode === "now"
+                    ? "border-teal-200 bg-white text-teal-800 shadow-sm"
+                    : "border-transparent text-slate-500 hover:bg-white"
+                }`}
+                onClick={() => setTimeMode("now")}
+              >
+                <Clock3 className="size-4" />
+                当前标记时间
+                <span className="ml-auto text-xs font-normal text-slate-400">
+                  到分钟
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  timeMode === "custom"
+                    ? "border-teal-200 bg-white text-teal-800 shadow-sm"
+                    : "border-transparent text-slate-500 hover:bg-white"
+                }`}
+                onClick={() => {
+                  setTimeMode("custom");
+                  setTimePrecision((current) =>
+                    current === "minute" ? "day" : current,
+                  );
+                }}
+              >
+                <CalendarDays className="size-4" />
+                自定义时间
+              </button>
+            </div>
+          </div>
+
+          {timeMode === "custom" && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold text-slate-600">
+                  自定义精度
+                </label>
+                <div className="flex gap-2 mt-2">
+                  {(["day", "month", "year"] as TimePrecision[]).map((p) => (
                 <button
                   key={p}
                   type="button"
-                  className={`flex-1 py-1.5 rounded-md text-xs font-medium border transition-colors ${timePrecision === p ? "bg-white text-slate-900 border-slate-300 shadow-sm" : "bg-transparent text-slate-500 border-transparent hover:bg-slate-200/50"}`}
+                      className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${timePrecision === p ? "bg-white text-teal-800 border-teal-200 shadow-sm" : "bg-transparent text-slate-500 border-transparent hover:bg-white"}`}
                   onClick={() => setTimePrecision(p)}
                 >
                   {p === "day"
@@ -294,19 +356,39 @@ export default function NewWorkPage() {
                       : "仅记年份"}
                 </button>
               ))}
+                </div>
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-500 block mb-1">
-              选择时间
-            </label>
-            <input
-              type="date"
-              className="w-full rounded-lg border bg-white p-2 text-sm focus:outline-none focus:border-slate-400 h-[38px]"
-              value={viewedDate}
-              onChange={(e) => setViewedDate(e.target.value)}
-            />
-          </div>
+              <div>
+                <label className="text-sm font-semibold text-slate-600 block mb-2">
+                  选择时间
+                </label>
+                {timePrecision === "year" ? (
+                  <input
+                    type="number"
+                    className="w-full field-control"
+                    min="0"
+                    max="9999"
+                    value={customYear}
+                    onChange={(e) => setCustomYear(e.target.value)}
+                  />
+                ) : timePrecision === "month" ? (
+                  <input
+                    type="month"
+                    className="w-full field-control"
+                    value={customMonth}
+                    onChange={(e) => setCustomMonth(e.target.value)}
+                  />
+                ) : (
+                  <input
+                    type="date"
+                    className="w-full field-control"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                  />
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>

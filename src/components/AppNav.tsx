@@ -13,7 +13,6 @@ import {
   Settings,
   Shield,
   Sparkles,
-  Users,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ interface AppNavProps {
 const navItems = [
   { href: "/works", label: "书影归档", icon: BookOpen },
   { href: "/dashboard", label: "数据统计", icon: ChartNoAxesColumn },
-  { href: "/friends", label: "朋友", icon: Users },
 ];
 
 export default function AppNav({
@@ -211,7 +209,7 @@ export default function AppNav({
                 私密优先
               </h3>
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                数据围绕你和朋友关系组织，不制造公开社交压力。
+                数据围绕你的个人资料与文化归档组织，不制造公开社交压力。
               </p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
