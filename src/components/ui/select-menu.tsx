@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Select } from "radix-ui";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +40,12 @@ export function SelectMenu({
         <Select.Content
           position="popper"
           sideOffset={6}
-          className="z-[140] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-[0_18px_60px_rgba(15,23,42,0.16)]"
+          className="z-[140] max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-[0_18px_60px_rgba(15,23,42,0.16)]"
         >
-          <Select.Viewport>
+          <Select.ScrollUpButton className="flex h-7 cursor-default items-center justify-center rounded-lg text-slate-400">
+            <ChevronUp className="size-4" />
+          </Select.ScrollUpButton>
+          <Select.Viewport className="max-h-60 overflow-y-auto pr-1">
             {options.map((option) => (
               <Select.Item
                 key={option.value}
@@ -56,6 +59,9 @@ export function SelectMenu({
               </Select.Item>
             ))}
           </Select.Viewport>
+          <Select.ScrollDownButton className="flex h-7 cursor-default items-center justify-center rounded-lg text-slate-400">
+            <ChevronDown className="size-4" />
+          </Select.ScrollDownButton>
         </Select.Content>
       </Select.Portal>
     </Select.Root>
