@@ -202,7 +202,7 @@ export default function WorksClientList({
           {currentDisplayedItems.map((item) => (
             <article
               key={item.id}
-              className="group relative rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm transition-colors hover:border-teal-200 hover:bg-white"
+              className="group relative rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm transition-[border-color,background-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-teal-200 hover:bg-white hover:shadow-[0_18px_45px_rgba(15,23,42,0.14)]"
             >
               <Link
                 href={`${detailBasePath}/${item.id}`}
@@ -261,10 +261,10 @@ export default function WorksClientList({
                 <Link
                   href={`/works/${item.id}/edit`}
                   prefetch={false}
-                  className="absolute bottom-3 right-3 grid size-7 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                  className="absolute bottom-3 right-3 grid size-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800 hover:shadow-md"
                   aria-label="编辑"
                 >
-                  <Pencil className="size-3.5" />
+                  <Pencil className="size-4" />
                 </Link>
               )}
             </article>
@@ -324,7 +324,7 @@ export default function WorksClientList({
                     <Link
                       href={`/works/${item.id}/edit`}
                       prefetch={false}
-                      className="text-right text-xs font-medium text-slate-400 hover:text-slate-800"
+                      className="inline-flex h-8 items-center justify-end rounded-lg px-3 text-right text-sm font-semibold text-slate-500 transition-colors hover:bg-teal-50 hover:text-teal-800"
                     >
                       编辑
                     </Link>

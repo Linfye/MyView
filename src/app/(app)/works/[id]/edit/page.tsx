@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useAnimatedNotice } from "@/components/ui/animated-notice";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { DatePartsSelector } from "@/components/ui/date-parts-selector";
 import { BookOpen, Film, Globe2, ImagePlus, Trash2, X } from "lucide-react";
 
 const MAX_POSTER_SIZE = 2 * 1024 * 1024;
@@ -148,7 +149,7 @@ export default function EditWorkPage({
         setLongReview(data.long_review || "");
         setPosterUrl(data.poster_url || "");
         setTimePrecision(data.time_precision || "day");
-        setViewedDate(data.viewed_at || "");
+        setViewedDate((data.viewed_at || "").slice(0, 10));
 
         setOldCanonicalWorkId(data.canonical_work_id);
         // 如果之前绑定过，直接把那个大写的 ID 填入框里回显出来
@@ -513,11 +514,20 @@ export default function EditWorkPage({
             <label className="text-xs font-semibold text-slate-500 block mb-1">
               选择时间
             </label>
-            <input
-              type="date"
-              className="w-full rounded-lg border bg-white p-2 text-sm focus:outline-none focus:border-slate-400 h-[38px]"
-              value={viewedDate}
-              onChange={(e) => setViewedDate(e.target.value)}
+            <DatePartsSelector
+              precision={timePrecision === "year" ? "year" : timePrecision === "month" ? "month" : "day"}
+              value={
+                timePrecision === "year"
+                  ? viewedDate.slice(0, 4)
+                  : timePrecision === "month"
+                    ? viewedDate.slice(0, 7)
+                    : viewedDate
+              }
+              onChange={(next) => {
+                if (timePrecision === "year") setViewedDate(`${next}-01-01`);
+                else if (timePrecision === "month") setViewedDate(`${next}-01`);
+                else setViewedDate(next);
+              }}
             />
           </div>
         </div>

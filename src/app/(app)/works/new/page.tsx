@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useAnimatedNotice } from "@/components/ui/animated-notice";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { DatePartsSelector } from "@/components/ui/date-parts-selector";
 import {
   BookOpen,
   CalendarDays,
@@ -499,30 +500,21 @@ export default function NewWorkPage() {
                 <label className="text-sm font-semibold text-slate-600 block mb-2">
                   选择时间
                 </label>
-                {timePrecision === "year" ? (
-                  <input
-                    type="number"
-                    className="w-full field-control"
-                    min="0"
-                    max="9999"
-                    value={customYear}
-                    onChange={(e) => setCustomYear(e.target.value)}
-                  />
-                ) : timePrecision === "month" ? (
-                  <input
-                    type="month"
-                    className="w-full field-control"
-                    value={customMonth}
-                    onChange={(e) => setCustomMonth(e.target.value)}
-                  />
-                ) : (
-                  <input
-                    type="date"
-                    className="w-full field-control"
-                    value={customDate}
-                    onChange={(e) => setCustomDate(e.target.value)}
-                  />
-                )}
+                <DatePartsSelector
+                  precision={timePrecision === "minute" ? "day" : timePrecision}
+                  value={
+                    timePrecision === "year"
+                      ? customYear
+                      : timePrecision === "month"
+                        ? customMonth
+                        : customDate
+                  }
+                  onChange={(next) => {
+                    if (timePrecision === "year") setCustomYear(next);
+                    else if (timePrecision === "month") setCustomMonth(next);
+                    else setCustomDate(next);
+                  }}
+                />
               </div>
             </div>
           )}
