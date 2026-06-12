@@ -10,6 +10,25 @@ type RawWorkItem = Omit<WorksListItem, "canonical_works"> & {
   canonical_works?: WorksListItem["canonical_works"] | WorksListItem["canonical_works"][];
 };
 
+const baseSelect = `
+  id,
+  type,
+  title,
+  creator,
+  year,
+  rating,
+  status,
+  visibility,
+  short_review,
+  viewed_at,
+  canonical_works ( canonical_id, title_zh, title_en )
+`;
+
+const selectWithPoster = `
+  ${baseSelect},
+  poster_url
+`;
+
 export default async function PublicUserPage({
   params,
 }: {
@@ -26,28 +45,32 @@ export default async function PublicUserPage({
 
   if (!profile) notFound();
 
-  const { data: items } = await supabase
+  const posterResult = await supabase
     .from("user_items")
-    .select(
-      `
-      id,
-      type,
-      title,
-      creator,
-      year,
-      rating,
-      status,
-      visibility,
-      short_review,
-      viewed_at,
-      canonical_works ( canonical_id, title_zh, title_en )
-    `,
-    )
+    .select(selectWithPoster)
     .eq("user_id", profile.id)
     .eq("visibility", "friends")
     .order("viewed_at", { ascending: false });
 
-  const normalizedItems = ((items || []) as RawWorkItem[]).map((item) => ({
+  let items = posterResult.data as RawWorkItem[] | null;
+  let error = posterResult.error;
+
+  if (error?.message?.includes("poster_url")) {
+    const fallback = await supabase
+      .from("user_items")
+      .select(baseSelect)
+      .eq("user_id", profile.id)
+      .eq("visibility", "friends")
+      .order("viewed_at", { ascending: false });
+
+    items = ((fallback.data || []) as RawWorkItem[]).map((item) => ({
+      ...item,
+      poster_url: null,
+    }));
+    error = fallback.error;
+  }
+
+  const normalizedItems = (items || []).map((item) => ({
     ...item,
     canonical_works: Array.isArray(item.canonical_works)
       ? item.canonical_works[0] || null

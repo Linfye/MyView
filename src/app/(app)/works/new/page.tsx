@@ -5,10 +5,20 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useAnimatedNotice } from "@/components/ui/animated-notice";
-import { BookOpen, CalendarDays, Clock3, Film, Globe2 } from "lucide-react";
+import { SelectMenu } from "@/components/ui/select-menu";
+import {
+  BookOpen,
+  CalendarDays,
+  Clock3,
+  Film,
+  Globe2,
+  ImagePlus,
+  X,
+} from "lucide-react";
 
 type TimeMode = "now" | "custom";
 type TimePrecision = "minute" | "day" | "month" | "year";
+const MAX_POSTER_SIZE = 2 * 1024 * 1024;
 
 function toLocalMinuteValue(date = new Date()) {
   const offset = date.getTimezoneOffset();
@@ -30,6 +40,8 @@ export default function NewWorkPage() {
   const [visibility, setVisibility] = useState("friends");
   const [shortReview, setShortReview] = useState("");
   const [longReview, setLongReview] = useState("");
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState("");
 
   const [canonicalId, setCanonicalId] = useState("");
 
@@ -43,6 +55,89 @@ export default function NewWorkPage() {
   const router = useRouter();
   const supabase = createClient();
   const { notify, NoticeHost } = useAnimatedNotice();
+  const ratingOptions = Array.from({ length: 11 }, (_, i) => ({
+    value: String(i),
+    label: `${i} 分`,
+  }));
+  const visibilityOptions = [
+    { value: "friends", label: "公开展示" },
+    { value: "private", label: "仅自己可见" },
+  ];
+  const copy =
+    type === "movie"
+      ? {
+          titleLabel: "电影 / 剧集名称",
+          titlePlaceholder: "如：星际穿越",
+          creatorLabel: "导演 / 主创",
+          creatorPlaceholder: "如：克里斯托弗·诺兰",
+          yearLabel: "上映年份",
+          posterLabel: "海报图片",
+          posterHelp: "可选。支持常见图片格式，最大 2MB。",
+          uploadImage: "上传海报",
+          canonicalPlaceholder: "输入 IMDb ID (如: tt1375666)",
+          canonicalHelp:
+            "用于连接 IMDb 等电影公共库。如果该 ID 在公共库中不存在，系统将自动发起收录。",
+          completed: "已看完",
+          inProgress: "正在看",
+          wishlist: "想看",
+          timeLabel: "观看时间",
+          shortLabel: "一句话短评",
+          shortPlaceholder: "用一句话总结你的观影感受...",
+          longLabel: "深度影评 (支持 Markdown)",
+          longPlaceholder: "写下更详细的观影剖析...",
+        }
+      : {
+          titleLabel: "书籍 / 文献名称",
+          titlePlaceholder: "如：百年孤独",
+          creatorLabel: "作者 / 编者",
+          creatorPlaceholder: "如：加西亚·马尔克斯",
+          yearLabel: "出版年份",
+          posterLabel: "封面图片",
+          posterHelp: "可选。支持常见图片格式，最大 2MB。",
+          uploadImage: "上传封面",
+          canonicalPlaceholder: "输入 Wikidata QID (如: Q13417184)",
+          canonicalHelp:
+            "用于连接 Wikidata 等书籍公共库。如果该 ID 在公共库中不存在，系统将自动发起收录。",
+          completed: "已读完",
+          inProgress: "正在读",
+          wishlist: "想读",
+          timeLabel: "阅读时间",
+          shortLabel: "一句话短评",
+          shortPlaceholder: "用一句话总结你的阅读感受...",
+          longLabel: "读书笔记 (支持 Markdown)",
+          longPlaceholder: "写下更详细的阅读笔记...",
+        };
+
+  const handlePosterChange = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      notify("图片格式不支持", "请上传 JPG、PNG、WebP 等图片文件。", "error");
+      return;
+    }
+    if (file.size > MAX_POSTER_SIZE) {
+      notify("图片太大", "海报图片不能超过 2MB。", "error");
+      return;
+    }
+    setPosterFile(file);
+    setPosterPreview(URL.createObjectURL(file));
+  };
+
+  const uploadPoster = async (userId: string) => {
+    if (!posterFile) return null;
+    const ext = posterFile.name.split(".").pop() || "jpg";
+    const path = `${userId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("posters")
+      .upload(path, posterFile, {
+        cacheControl: "31536000",
+        contentType: posterFile.type,
+      });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from("posters").getPublicUrl(path);
+    return data.publicUrl;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +205,19 @@ export default function NewWorkPage() {
       }
     }
 
+    let posterUrl: string | null = null;
+    try {
+      posterUrl = await uploadPoster(user.id);
+    } catch (error) {
+      notify(
+        "海报上传失败",
+        error instanceof Error ? error.message : "请稍后重试。",
+        "error",
+      );
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.from("user_items").insert([
       {
         user_id: user.id,
@@ -123,6 +231,7 @@ export default function NewWorkPage() {
         visibility,
         short_review: shortReview,
         long_review: longReview,
+        poster_url: posterUrl,
         viewed_at: finalizedTime.viewedAt,
         time_precision: finalizedTime.precision,
       },
@@ -187,52 +296,90 @@ export default function NewWorkPage() {
           <input
             type="text"
             className="w-full rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-slate-900 placeholder-slate-400 font-mono outline-none transition-colors focus:border-teal-500"
-            placeholder={
-              type === "movie"
-                ? "输入 IMDb ID (如: tt1375666)"
-                : "输入 Wikidata QID (如: Q13417184)"
-            }
+            placeholder={copy.canonicalPlaceholder}
             value={canonicalId}
             onChange={(e) => setCanonicalId(e.target.value)}
           />
           <p className="text-sm text-teal-800/75 leading-6">
-            系统会保存为大写字母。如果该 ID
-            在公共库中不存在，系统将自动发起收录，由管理员后续补全其多语言元数据。
+            {copy.canonicalHelp}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
             <label className="text-xs font-semibold text-slate-500">
-              作品名称
+              {copy.titleLabel}
             </label>
             <input
               type="text"
               required
               className="mt-1 w-full rounded-lg border p-2.5 text-sm focus:outline-none focus:border-slate-400"
-              placeholder="如：星际穿越"
+              placeholder={copy.titlePlaceholder}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500">
-              导演 / 作者
+              {copy.creatorLabel}
             </label>
             <input
               type="text"
               className="mt-1 w-full rounded-lg border p-2.5 text-sm focus:outline-none focus:border-slate-400"
-              placeholder="如：诺兰"
+              placeholder={copy.creatorPlaceholder}
               value={creator}
               onChange={(e) => setCreator(e.target.value)}
             />
           </div>
         </div>
 
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <label className="text-sm font-semibold text-slate-600">
+            {copy.posterLabel}
+          </label>
+          <p className="mt-1 text-sm text-slate-400">
+            {copy.posterHelp}
+          </p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+            {posterPreview ? (
+              <div className="relative w-28">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={posterPreview}
+                  alt="海报预览"
+                  className="h-40 w-28 rounded-xl border border-slate-200 object-cover"
+                />
+                <button
+                  type="button"
+                  className="absolute -right-2 -top-2 grid size-7 place-items-center rounded-full bg-white text-slate-500 shadow hover:text-red-500"
+                  onClick={() => {
+                    setPosterFile(null);
+                    setPosterPreview("");
+                  }}
+                  aria-label="移除海报"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm font-medium text-slate-500 transition-colors hover:border-teal-300 hover:bg-teal-50 sm:w-44">
+                <ImagePlus className="mb-2 size-6" />
+                {copy.uploadImage}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => handlePosterChange(e.target.files?.[0])}
+                />
+              </label>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="text-xs font-semibold text-slate-500">
-              出版/上映年份
+              {copy.yearLabel}
             </label>
             <input
               type="number"
@@ -246,58 +393,48 @@ export default function NewWorkPage() {
             <label className="text-xs font-semibold text-slate-500">
               我的评分 (10分制)
             </label>
-            <select
-              className="mt-1 w-full rounded-lg border p-2.5 text-sm focus:outline-none focus:border-slate-400"
+            <SelectMenu
               value={rating}
-              onChange={(e) => setRating(e.target.value)}
-            >
-              {[...Array(11)].map((_, i) => (
-                <option key={i} value={i}>
-                  {i} 分{" "}
-                  {i === 10
-                    ? "神作"
-                    : i >= 8
-                      ? "杰作"
-                      : i >= 6
-                        ? "及格"
-                        : "糟糕"}
-                </option>
-              ))}
-            </select>
+              onValueChange={setRating}
+              options={ratingOptions}
+              className="mt-1"
+              ariaLabel="选择评分"
+            />
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500">
               记录状态
             </label>
-            <select
-              className="mt-1 w-full rounded-lg border p-2.5 text-sm focus:outline-none focus:border-slate-400"
+            <SelectMenu
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="completed">已看完</option>
-              <option value="in_progress">正处于</option>
-              <option value="wishlist">想看/想读</option>
-            </select>
+              onValueChange={setStatus}
+              options={[
+                { value: "completed", label: copy.completed },
+                { value: "in_progress", label: copy.inProgress },
+                { value: "wishlist", label: copy.wishlist },
+              ]}
+              className="mt-1"
+              ariaLabel="选择记录状态"
+            />
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500">
               隐私控制
             </label>
-            <select
-              className="mt-1 w-full rounded-lg border p-2.5 text-sm focus:outline-none focus:border-slate-400"
+            <SelectMenu
               value={visibility}
-              onChange={(e) => setVisibility(e.target.value)}
-            >
-              <option value="friends">公开展示</option>
-              <option value="private">仅自己可见</option>
-            </select>
+              onValueChange={setVisibility}
+              options={visibilityOptions}
+              className="mt-1"
+              ariaLabel="选择隐私控制"
+            />
           </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
           <div>
             <label className="text-sm font-semibold text-slate-600">
-              记录时间
+              {copy.timeLabel}
             </label>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button
@@ -393,12 +530,12 @@ export default function NewWorkPage() {
 
         <div>
           <label className="text-xs font-semibold text-slate-500">
-            一句话短评
+            {copy.shortLabel}
           </label>
           <input
             type="text"
             className="mt-1 w-full rounded-lg border p-2.5 text-sm focus:outline-none focus:border-slate-400"
-            placeholder="用一句话总结你的核心感受..."
+            placeholder={copy.shortPlaceholder}
             value={shortReview}
             onChange={(e) => setShortReview(e.target.value)}
           />
@@ -406,12 +543,12 @@ export default function NewWorkPage() {
 
         <div>
           <label className="text-xs font-semibold text-slate-500">
-            深度长评 (支持 Markdown)
+            {copy.longLabel}
           </label>
           <textarea
             rows={5}
             className="mt-1 w-full rounded-lg border p-2.5 text-sm focus:outline-none focus:border-slate-400"
-            placeholder="写下更详细的剖析..."
+            placeholder={copy.longPlaceholder}
             value={longReview}
             onChange={(e) => setLongReview(e.target.value)}
           />

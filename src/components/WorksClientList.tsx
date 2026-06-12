@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { SelectMenu } from "@/components/ui/select-menu";
 import {
   BookOpen,
   Film,
@@ -25,6 +26,7 @@ interface WorkItem {
   visibility: string;
   short_review?: string;
   long_review?: string;
+  poster_url?: string | null;
   viewed_at: string;
   time_precision?: string;
   canonical_works?: {
@@ -75,11 +77,15 @@ export default function WorksClientList({
     let matchesEra = true;
     const year = item.year;
     if (year) {
-      if (eraFilter === "2020s") matchesEra = year >= 2020;
+      if (eraFilter === "2020s") matchesEra = year >= 2020 && year < 2030;
       else if (eraFilter === "2010s") matchesEra = year >= 2010 && year < 2020;
       else if (eraFilter === "2000s") matchesEra = year >= 2000 && year < 2010;
       else if (eraFilter === "90s") matchesEra = year >= 1990 && year < 2000;
-      else if (eraFilter === "older") matchesEra = year < 1990;
+      else if (eraFilter === "80s") matchesEra = year >= 1980 && year < 1990;
+      else if (eraFilter === "70s") matchesEra = year >= 1970 && year < 1980;
+      else if (eraFilter === "60s") matchesEra = year >= 1960 && year < 1970;
+      else if (eraFilter === "50s") matchesEra = year >= 1950 && year < 1960;
+      else if (eraFilter === "older") matchesEra = year < 1950;
     } else if (eraFilter !== "all") {
       matchesEra = false;
     }
@@ -104,6 +110,31 @@ export default function WorksClientList({
     setCurrentPage(1);
   };
 
+  const ratingOptions = [
+    { value: "all", label: "所有评分" },
+    { value: "god", label: "10分" },
+    { value: "high", label: "8-9分" },
+    { value: "pass", label: "6-7分" },
+    { value: "low", label: "6分以下" },
+  ];
+  const eraOptions = [
+    { value: "all", label: "所有时代" },
+    { value: "2020s", label: "2020s" },
+    { value: "2010s", label: "2010s" },
+    { value: "2000s", label: "2000s" },
+    { value: "90s", label: "1990s" },
+    { value: "80s", label: "1980s" },
+    { value: "70s", label: "1970s" },
+    { value: "60s", label: "1960s" },
+    { value: "50s", label: "1950s" },
+    { value: "older", label: "1950以前" },
+  ];
+  const pageSizeOptions = [
+    { value: "20", label: "每页 20" },
+    { value: "50", label: "每页 50" },
+    { value: "100", label: "每页 100" },
+  ];
+
   return (
     <div className="space-y-4 px-1">
       <div className="app-surface rounded-xl p-3">
@@ -115,38 +146,24 @@ export default function WorksClientList({
             value={searchQuery}
             onChange={(e) => handleFilterChange("search", e.target.value)}
           />
-          <select
-            className="field-control h-9 text-sm"
+          <SelectMenu
             value={ratingFilter}
-            onChange={(e) => handleFilterChange("rating", e.target.value)}
-          >
-            <option value="all">所有评分</option>
-            <option value="god">10分 神作</option>
-            <option value="high">8-9分 杰作</option>
-            <option value="pass">6-7分 及格</option>
-            <option value="low">6分以下</option>
-          </select>
-          <select
-            className="field-control h-9 text-sm"
+            onValueChange={(value) => handleFilterChange("rating", value)}
+            options={ratingOptions}
+            ariaLabel="筛选评分"
+          />
+          <SelectMenu
             value={eraFilter}
-            onChange={(e) => handleFilterChange("era", e.target.value)}
-          >
-            <option value="all">所有时代</option>
-            <option value="2020s">时代 2020s</option>
-            <option value="2010s">时代 2010s</option>
-            <option value="2000s">时代 2000s</option>
-            <option value="90s">时代 90s</option>
-            <option value="older">世纪老片/古籍</option>
-          </select>
-          <select
-            className="field-control h-9 text-sm"
-            value={itemsPerPage}
-            onChange={(e) => handleFilterChange("pageSize", e.target.value)}
-          >
-            <option value={20}>每页 20</option>
-            <option value={50}>每页 50</option>
-            <option value={100}>每页 100</option>
-          </select>
+            onValueChange={(value) => handleFilterChange("era", value)}
+            options={eraOptions}
+            ariaLabel="筛选年代"
+          />
+          <SelectMenu
+            value={String(itemsPerPage)}
+            onValueChange={(value) => handleFilterChange("pageSize", value)}
+            options={pageSizeOptions}
+            ariaLabel="每页数量"
+          />
           <div className="flex h-9 rounded-lg border border-slate-200 bg-white p-1">
             <button
               type="button"
@@ -181,29 +198,38 @@ export default function WorksClientList({
           未找到匹配的归档记录。
         </div>
       ) : viewMode === "cards" ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {currentDisplayedItems.map((item) => (
             <article
               key={item.id}
-              className="group relative rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition-colors hover:border-teal-200 hover:bg-white"
+              className="group relative rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm transition-colors hover:border-teal-200 hover:bg-white"
             >
               <Link
                 href={`${detailBasePath}/${item.id}`}
                 prefetch={false}
                 className="block space-y-3"
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  {item.poster_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.poster_url}
+                      alt=""
+                      className="h-24 w-16 shrink-0 rounded-lg object-cover border border-slate-100 bg-slate-100"
+                      loading="lazy"
+                    />
+                  )}
                   <div className="min-w-0">
-                    <h3 className="line-clamp-2 text-base font-semibold leading-6 text-slate-900">
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900">
                       {item.canonical_works?.title_zh || item.title}
                     </h3>
-                    <p className="mt-1 truncate text-sm text-slate-500">
+                    <p className="mt-1 truncate text-xs text-slate-500">
                       {item.creator || "未知主创"}
                       {item.year ? ` · ${item.year}` : ""}
                     </p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-sm font-semibold text-amber-700">
-                    <Star className="size-3.5 fill-amber-500 text-amber-500" />
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                    <Star className="size-3 fill-amber-500 text-amber-500" />
                     {item.rating}
                   </span>
                 </div>
@@ -226,7 +252,7 @@ export default function WorksClientList({
                   </span>
                 </div>
                 {item.short_review && (
-                  <p className="line-clamp-2 min-h-10 text-sm leading-5 text-slate-600">
+                  <p className="line-clamp-2 min-h-9 text-xs leading-5 text-slate-600">
                     {item.short_review}
                   </p>
                 )}

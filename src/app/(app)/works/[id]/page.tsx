@@ -37,6 +37,7 @@ export default async function WorkDetailPage({
       visibility,
       short_review,
       long_review,
+      poster_url,
       viewed_at,
       time_precision,
       canonical_works ( canonical_id, title_zh, title_en )
@@ -97,16 +98,28 @@ export default async function WorkDetailPage({
           )}
         </div>
 
-        <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-          {title}
-        </h1>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-          <span>{data.creator || "未知主创"}</span>
-          {data.year && <span>{data.year}</span>}
-          <span className="inline-flex items-center gap-1 font-semibold text-amber-700">
-            <Star className="size-4 fill-amber-500 text-amber-500" />
-            {data.rating} / 10
-          </span>
+        <div className="mt-5 flex flex-col gap-5 sm:flex-row">
+          {data.poster_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.poster_url}
+              alt=""
+              className="h-64 w-44 shrink-0 rounded-2xl border border-slate-200 object-cover bg-slate-100"
+            />
+          )}
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              {title}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+              <span>{data.creator || "未知主创"}</span>
+              {data.year && <span>{data.year}</span>}
+              <span className="inline-flex items-center gap-1 font-semibold text-amber-700">
+                <Star className="size-4 fill-amber-500 text-amber-500" />
+                {data.rating} / 10
+              </span>
+            </div>
+          </div>
         </div>
 
         {data.short_review && (
