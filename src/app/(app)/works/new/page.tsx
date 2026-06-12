@@ -14,12 +14,23 @@ import {
   Film,
   Globe2,
   ImagePlus,
+  Upload,
   X,
 } from "lucide-react";
 
 type TimeMode = "now" | "custom";
 type TimePrecision = "minute" | "day" | "month" | "year";
 const MAX_POSTER_SIZE = 2 * 1024 * 1024;
+const MAX_JSON_SIZE = 1024 * 1024;
+
+type ImportRow = {
+  类型?: unknown;
+  电影名?: unknown;
+  书籍名?: unknown;
+  打的分数?: unknown;
+  标记时间?: unknown;
+  出版年?: unknown;
+};
 
 function toLocalMinuteValue(date = new Date()) {
   const offset = date.getTimezoneOffset();
@@ -29,6 +40,22 @@ function toLocalMinuteValue(date = new Date()) {
 
 function toLocalDateValue(date = new Date()) {
   return toLocalMinuteValue(date).slice(0, 10);
+}
+
+function normalizeImportedTitle(value: unknown) {
+  if (typeof value !== "string") return "";
+  return value
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(" / ");
+}
+
+function normalizeImportedDate(value: unknown) {
+  if (typeof value !== "string") return toLocalDateValue();
+  const match = value.match(/^\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : toLocalDateValue();
 }
 
 export default function NewWorkPage() {
@@ -138,6 +165,82 @@ export default function NewWorkPage() {
 
     const { data } = supabase.storage.from("posters").getPublicUrl(path);
     return data.publicUrl;
+  };
+
+  const handleJsonImport = async (file?: File) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      notify("文件格式不支持", "请上传 JSON 文件。", "error");
+      return;
+    }
+    if (file.size > MAX_JSON_SIZE) {
+      notify("文件太大", "JSON 文件不能超过 1MB。", "error");
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      notify("登录状态已失效", "请重新登录后再导入。", "error");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(await file.text()) as unknown;
+      if (!Array.isArray(parsed)) {
+        notify("导入失败", "JSON 顶层必须是数组。", "error");
+        return;
+      }
+
+      const rows = (parsed as ImportRow[])
+        .map((row) => {
+          const typeText = typeof row.类型 === "string" ? row.类型 : "";
+          const itemType = typeText.includes("书") ? "book" : "movie";
+          const rawTitle = itemType === "movie" ? row.电影名 : row.书籍名;
+          const title = normalizeImportedTitle(rawTitle);
+          const rating = Number(row.打的分数);
+          const year = Number.parseInt(String(row.出版年 || ""), 10);
+
+          if (!title || Number.isNaN(rating)) return null;
+
+          return {
+            user_id: user.id,
+            canonical_work_id: null,
+            type: itemType,
+            title,
+            creator: null,
+            year: Number.isNaN(year) ? null : year,
+            rating,
+            status: "completed",
+            visibility,
+            short_review: null,
+            long_review: null,
+            viewed_at: normalizeImportedDate(row.标记时间),
+            time_precision: "day",
+          };
+        })
+        .filter((row): row is NonNullable<typeof row> => Boolean(row));
+
+      if (rows.length === 0) {
+        notify("导入失败", "没有找到可导入的有效条目。", "error");
+        return;
+      }
+
+      const { error } = await supabase.from("user_items").insert(rows);
+      if (error) {
+        notify("导入失败", error.message, "error");
+        return;
+      }
+
+      notify("导入完成", `已导入 ${rows.length} 条归档记录。`, "success");
+      window.setTimeout(() => {
+        router.push("/works");
+        router.refresh();
+      }, 650);
+    } catch {
+      notify("导入失败", "JSON 文件无法解析。", "error");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -256,6 +359,30 @@ export default function NewWorkPage() {
       <NoticeHost />
       <h1 className="text-xl font-bold text-slate-900">添加新纪录</h1>
       <p className="text-sm text-slate-500 mt-1">归档你的文化足迹。</p>
+
+      <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50/60 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-teal-950">批量导入 JSON</h2>
+            <p className="mt-1 text-sm leading-6 text-teal-800/75">
+              支持电影和书籍记录，名称只取前两段，导入评分、标记时间和出版年。
+            </p>
+          </div>
+          <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-800">
+            <Upload className="size-4" />
+            上传 JSON
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              onChange={(e) => {
+                void handleJsonImport(e.target.files?.[0]);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-6">
         <div>

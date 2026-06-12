@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { createClient } from "@/lib/supabase/client";
+import { useAnimatedNotice } from "@/components/ui/animated-notice";
 import {
   BookOpen,
   Film,
@@ -12,6 +14,7 @@ import {
   LockKeyhole,
   Pencil,
   Star,
+  Trash2,
   Users,
 } from "lucide-react";
 
@@ -45,14 +48,19 @@ export default function WorksClientList({
   readOnly?: boolean;
   detailBasePath?: string;
 }) {
+  const [items, setItems] = useState(initialItems);
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [eraFilter, setEraFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  const supabase = createClient();
+  const { notify, confirm, NoticeHost } = useAnimatedNotice();
 
-  const filteredItems = initialItems.filter((item) => {
+  const filteredItems = items.filter((item) => {
     const titleZh = item.canonical_works?.title_zh || "";
     const titleEn = item.canonical_works?.title_en || "";
     const pureTitle = item.title || "";
@@ -98,6 +106,12 @@ export default function WorksClientList({
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+  const currentPageIds = currentDisplayedItems.map((item) => item.id);
+  const selectedOnPage = currentPageIds.filter((id) =>
+    selectedIds.includes(id),
+  );
+  const allCurrentPageSelected =
+    currentPageIds.length > 0 && selectedOnPage.length === currentPageIds.length;
 
   const handleFilterChange = (
     type: "search" | "rating" | "era" | "pageSize",
@@ -108,6 +122,49 @@ export default function WorksClientList({
     if (type === "era") setEraFilter(value);
     if (type === "pageSize") setItemsPerPage(Number(value));
     setCurrentPage(1);
+  };
+
+  const toggleSelected = (id: string, checked: boolean) => {
+    setSelectedIds((current) =>
+      checked ? Array.from(new Set([...current, id])) : current.filter((item) => item !== id),
+    );
+  };
+
+  const toggleCurrentPage = (checked: boolean) => {
+    setSelectedIds((current) => {
+      if (!checked) return current.filter((id) => !currentPageIds.includes(id));
+      return Array.from(new Set([...current, ...currentPageIds]));
+    });
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.length === 0 || deleting) return;
+    const confirmed = await confirm({
+      title: "删除所选归档？",
+      message: `确定要删除选中的 ${selectedIds.length} 条归档吗？此操作不可撤销。`,
+      confirmText: "删除",
+      dangerous: true,
+    });
+    if (!confirmed) return;
+
+    setDeleting(true);
+    const { error } = await supabase
+      .from("user_items")
+      .delete()
+      .in("id", selectedIds);
+
+    if (error) {
+      notify("删除失败", error.message, "error");
+      setDeleting(false);
+      return;
+    }
+
+    setItems((current) =>
+      current.filter((item) => !selectedIds.includes(item.id)),
+    );
+    notify("已删除", `已删除 ${selectedIds.length} 条归档。`, "success");
+    setSelectedIds([]);
+    setDeleting(false);
   };
 
   const ratingOptions = [
@@ -137,6 +194,7 @@ export default function WorksClientList({
 
   return (
     <div className="space-y-4 px-1">
+      <NoticeHost />
       <div className="app-surface rounded-xl p-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1.5fr_0.8fr_0.8fr_0.7fr_auto]">
           <input
@@ -191,6 +249,30 @@ export default function WorksClientList({
             </button>
           </div>
         </div>
+        {!readOnly && (
+          <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-slate-300 accent-teal-700"
+                checked={allCurrentPageSelected}
+                onChange={(event) => toggleCurrentPage(event.target.checked)}
+              />
+              选择本页
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={selectedIds.length === 0 || deleting}
+              onClick={handleBatchDelete}
+              className="h-9 gap-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 sm:self-end"
+            >
+              <Trash2 className="size-4" />
+              {deleting ? "正在删除..." : `删除所选 (${selectedIds.length})`}
+            </Button>
+          </div>
+        )}
       </div>
 
       {currentDisplayedItems.length === 0 ? (
@@ -204,10 +286,23 @@ export default function WorksClientList({
               key={item.id}
               className="group relative rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm transition-[border-color,background-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-teal-200 hover:bg-white hover:shadow-[0_18px_45px_rgba(15,23,42,0.14)]"
             >
+              {!readOnly && (
+                <label className="absolute left-3 top-3 z-10 grid size-8 place-items-center rounded-lg border border-slate-200 bg-white/95 shadow-sm">
+                  <input
+                    type="checkbox"
+                    className="size-4 rounded border-slate-300 accent-teal-700"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={(event) =>
+                      toggleSelected(item.id, event.target.checked)
+                    }
+                    aria-label="选择归档"
+                  />
+                </label>
+              )}
               <Link
                 href={`${detailBasePath}/${item.id}`}
                 prefetch={false}
-                className="block space-y-3"
+                className={`block space-y-3 ${!readOnly ? "pl-9" : ""}`}
               >
                 <div className="flex items-start gap-3">
                   {item.poster_url && (
@@ -277,9 +372,10 @@ export default function WorksClientList({
               className={`grid gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500 ${
                 readOnly
                   ? "grid-cols-[1.4fr_0.8fr_0.5fr_0.5fr]"
-                  : "grid-cols-[1.4fr_0.8fr_0.5fr_0.5fr_70px]"
+                  : "grid-cols-[34px_1.4fr_0.8fr_0.5fr_0.5fr_86px]"
               }`}
             >
+              {!readOnly && <span />}
               <span>作品</span>
               <span>主创</span>
               <span>类型</span>
@@ -293,9 +389,20 @@ export default function WorksClientList({
                   className={`grid gap-3 border-b border-slate-100 px-4 py-3 text-sm last:border-b-0 hover:bg-slate-50/80 ${
                     readOnly
                       ? "grid-cols-[1.4fr_0.8fr_0.5fr_0.5fr]"
-                      : "grid-cols-[1.4fr_0.8fr_0.5fr_0.5fr_70px]"
+                      : "grid-cols-[34px_1.4fr_0.8fr_0.5fr_0.5fr_86px]"
                   }`}
                 >
+                  {!readOnly && (
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 size-4 rounded border-slate-300 accent-teal-700"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={(event) =>
+                        toggleSelected(item.id, event.target.checked)
+                      }
+                      aria-label="选择归档"
+                    />
+                  )}
                   <Link
                     href={`${detailBasePath}/${item.id}`}
                     prefetch={false}

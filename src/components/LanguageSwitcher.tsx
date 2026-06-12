@@ -91,6 +91,20 @@ const textMap: Record<string, string> = {
   "深度长评 (支持 Markdown)": "Long review (Markdown supported)",
   "取消": "Cancel",
   "归档存储": "Save entry",
+  "批量导入 JSON": "Bulk import JSON",
+  "支持电影和书籍记录，名称只取前两段，导入评分、标记时间和出版年。":
+    "Supports movie and book records. Only the first two name segments are used, importing rating, marked date, and publication year.",
+  "上传 JSON": "Upload JSON",
+  "文件格式不支持": "Unsupported file format",
+  "请上传 JSON 文件。": "Please upload a JSON file.",
+  "文件太大": "File too large",
+  "JSON 文件不能超过 1MB。": "JSON file must be under 1 MB.",
+  "请重新登录后再导入。": "Please log in again before importing.",
+  "导入失败": "Import failed",
+  "JSON 顶层必须是数组。": "The top-level JSON value must be an array.",
+  "没有找到可导入的有效条目。": "No valid entries were found to import.",
+  "导入完成": "Import complete",
+  "JSON 文件无法解析。": "The JSON file could not be parsed.",
   "海报图片": "Poster image",
   "封面图片": "Cover image",
   "可选。支持常见图片格式，最大 2MB。":
@@ -168,6 +182,10 @@ const textMap: Record<string, string> = {
   "评分": "Rating",
   "操作": "Action",
   "编辑": "Edit",
+  "选择本页": "Select page",
+  "选择归档": "Select entry",
+  "删除所选归档？": "Delete selected entries?",
+  "正在删除...": "Deleting...",
   "上一页": "Previous",
   "下一页": "Next",
   "神作": "Masterpiece",
@@ -269,7 +287,6 @@ const textMap: Record<string, string> = {
   "私人可见": "Private",
   "编辑归档记录": "Edit archive entry",
   "删除此记录": "Delete this entry",
-  "正在删除...": "Deleting...",
   "正在读取原归档数据...": "Loading archive entry...",
   "(选填/可编辑修改)": "(optional / editable)",
   "时间记录精度": "Time precision",
@@ -392,6 +409,12 @@ function translateText(value: string) {
     .replace(/(\d+)月\s+\((\d+)年\)/g, "$1/$2")
     .replace(/(\d{4})年/g, "$1")
     .replace(/(\d+)秒后自动继续/g, "Continuing in $1 seconds")
+    .replace(/删除所选 \((\d+)\)/g, "Delete selected ($1)")
+    .replace(/已删除\s+(\d+)\s+条归档。/g, "$1 archive entries deleted.")
+    .replace(
+      /确定要删除选中的\s+(\d+)\s+条归档吗？此操作不可撤销。/g,
+      "Delete the selected $1 archive entries? This cannot be undone.",
+    )
     .replace(/正在修改《(.+)》的记忆档案。/g, "Editing archive entry for $1.")
     .replace(
       /确定要彻底删除《(.+)》的记忆档案吗？此操作不可撤销。/g,
