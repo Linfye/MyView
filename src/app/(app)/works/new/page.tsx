@@ -227,10 +227,15 @@ export default function NewWorkPage() {
         return;
       }
 
-      const { error } = await supabase.from("user_items").insert(rows);
-      if (error) {
-        notify("导入失败", error.message, "error");
-        return;
+      const chunkSize = 500;
+      for (let start = 0; start < rows.length; start += chunkSize) {
+        const { error } = await supabase
+          .from("user_items")
+          .insert(rows.slice(start, start + chunkSize));
+        if (error) {
+          notify("导入失败", error.message, "error");
+          return;
+        }
       }
 
       notify("导入完成", `已导入 ${rows.length} 条归档记录。`, "success");

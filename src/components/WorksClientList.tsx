@@ -53,6 +53,7 @@ export default function WorksClientList({
   const [ratingFilter, setRatingFilter] = useState("all");
   const [eraFilter, setEraFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -122,6 +123,13 @@ export default function WorksClientList({
     if (type === "era") setEraFilter(value);
     if (type === "pageSize") setItemsPerPage(Number(value));
     setCurrentPage(1);
+    setPageInput("1");
+  };
+
+  const goToPage = (page: number) => {
+    const safePage = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(safePage);
+    setPageInput(String(safePage));
   };
 
   const toggleSelected = (id: string, checked: boolean) => {
@@ -444,25 +452,45 @@ export default function WorksClientList({
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
+        <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
           <Button
             variant="outline"
             size="sm"
             className="text-xs h-8 px-2.5"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
+            onClick={() => goToPage(currentPage - 1)}
           >
             ← 上一页
           </Button>
           <span className="text-xs font-semibold text-slate-600">
             第 {currentPage} / {totalPages} 页，共 {filteredItems.length} 条
           </span>
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              goToPage(Number(pageInput) || 1);
+            }}
+          >
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              className="field-control h-8 w-20 px-2 py-1 text-center text-xs"
+              value={pageInput}
+              onChange={(event) => setPageInput(event.target.value)}
+              aria-label="跳转页码"
+            />
+            <Button type="submit" variant="outline" size="sm" className="h-8 px-2.5 text-xs">
+              跳转
+            </Button>
+          </form>
           <Button
             variant="outline"
             size="sm"
             className="text-xs h-8 px-2.5"
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
+            onClick={() => goToPage(currentPage + 1)}
           >
             下一页 →
           </Button>

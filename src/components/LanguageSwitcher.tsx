@@ -187,6 +187,8 @@ const textMap: Record<string, string> = {
   "删除所选归档？": "Delete selected entries?",
   "正在删除...": "Deleting...",
   "上一页": "Previous",
+  "跳转": "Go",
+  "跳转页码": "Go to page",
   "下一页": "Next",
   "神作": "Masterpiece",
   "杰作": "Excellent",

@@ -30,29 +30,43 @@ const selectWithPoster = `
   poster_url
 `;
 
+async function fetchAllWorks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId?: string,
+  selectQuery = selectWithPoster,
+) {
+  const pageSize = 1000;
+  const allItems: RawWorkItem[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("user_items")
+      .select(selectQuery)
+      .eq("user_id", userId)
+      .order("viewed_at", { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) return { data: allItems, error };
+    allItems.push(...((data || []) as unknown as RawWorkItem[]));
+    if (!data || data.length < pageSize) return { data: allItems, error: null };
+  }
+}
+
 export default async function WorksPage() {
   const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const posterResult = await supabase
-    .from("user_items")
-    .select(selectWithPoster)
-    .eq("user_id", session?.user.id)
-    .order("viewed_at", { ascending: false });
+  const posterResult = await fetchAllWorks(supabase, session?.user.id);
 
   let items = posterResult.data as RawWorkItem[] | null;
   let error = posterResult.error;
 
   if (error?.message?.includes("poster_url")) {
-    const fallback = await supabase
-      .from("user_items")
-      .select(baseSelect)
-      .eq("user_id", session?.user.id)
-      .order("viewed_at", { ascending: false });
+    const fallback = await fetchAllWorks(supabase, session?.user.id, baseSelect);
 
-    items = ((fallback.data || []) as RawWorkItem[]).map((item) => ({
+    items = (fallback.data || []).map((item) => ({
       ...item,
       poster_url: null,
     }));
