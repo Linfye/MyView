@@ -48,7 +48,10 @@ const textMap: Record<string, string> = {
     "Did not receive it? Check spam or try again later.",
   "正在申请数字通关令...": "Requesting access...",
   "书影归档": "Archive",
+  "公开展示的电影与图书记录。": "Public movie and book records.",
   "数据统计": "Stats",
+  "公开记录里的评分与年代分布。":
+    "Rating and era distribution from public records.",
   "公共库": "Library",
   "关于": "About",
   "退出": "Sign out",
@@ -208,6 +211,10 @@ const textMap: Record<string, string> = {
   "时间分布": "Time distribution",
   "按作品年份每 10 年归档。": "Grouped by work year in 10-year buckets.",
   "按作品年份每 50 年归档。": "Grouped by work year in 50-year buckets.",
+  "每年标记数量": "Entries marked by year",
+  "按标记时间统计电影和图书，横坐标为年份。":
+    "Movies and books grouped by marked year, with years on the x-axis.",
+  "暂无标记时间数据": "No marked-date data yet",
   "暂无评分数据": "No rating data yet",
   "暂无年份数据": "No year data yet",
   "归档动态趋势": "Archive activity trend",
@@ -227,6 +234,12 @@ const textMap: Record<string, string> = {
   "个人资料设置": "Profile settings",
   "管理你的公开用户名片与个人资料。":
     "Manage your public profile and account details.",
+  "我的公开主页": "My public profile",
+  "查看我的主页": "View my profile",
+  "复制分享链接": "Copy share link",
+  "链接已复制": "Link copied",
+  "你的公开主页链接已经复制到剪贴板。":
+    "Your public profile link has been copied to the clipboard.",
   "修改密码": "Change password",
   "输入旧密码验证身份，然后设置新密码。":
     "Verify with your current password, then set a new one.",

@@ -5,6 +5,7 @@ type DashboardItem = {
   type: string | null;
   rating: number | null;
   year: number | null;
+  viewed_at: string | null;
 };
 
 async function fetchAllDashboardItems(
@@ -17,7 +18,7 @@ async function fetchAllDashboardItems(
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await supabase
       .from("user_items")
-      .select("type, rating, year")
+      .select("type, rating, year, viewed_at")
       .eq("user_id", userId)
       .range(from, from + pageSize - 1);
 

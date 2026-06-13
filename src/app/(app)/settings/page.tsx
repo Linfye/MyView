@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useAnimatedNotice } from "@/components/ui/animated-notice";
-import { KeyRound, Settings } from "lucide-react";
+import { Copy, ExternalLink, KeyRound, Settings, Share2 } from "lucide-react";
 
 export default function SettingsPage() {
   const [username, setUsername] = useState("");
@@ -130,6 +130,15 @@ export default function SettingsPage() {
     notify("密码已更新", "下次登录请使用新密码。", "success");
   };
 
+  const publicProfilePath = username ? `/users/${username}` : "";
+
+  const copyPublicProfileLink = async () => {
+    if (!publicProfilePath) return;
+    const url = `${window.location.origin}${publicProfilePath}`;
+    await navigator.clipboard.writeText(url);
+    notify("链接已复制", "你的公开主页链接已经复制到剪贴板。", "success");
+  };
+
   if (fetching)
     return (
       <div className="text-center py-12 text-sm text-slate-400">
@@ -153,6 +162,38 @@ export default function SettingsPage() {
             管理你的公开用户名片与个人资料。
           </p>
         </div>
+
+        {publicProfilePath && (
+          <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
+            <div className="flex items-start gap-3">
+              <Share2 className="mt-0.5 size-5 text-teal-700" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-teal-950">我的公开主页</p>
+                <p className="mt-1 truncate font-mono text-xs text-teal-800/75">
+                  {publicProfilePath}
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <Button asChild size="sm" className="h-9 gap-2">
+                    <a href={publicProfilePath} target="_blank" rel="noreferrer">
+                      <ExternalLink className="size-4" />
+                      查看我的主页
+                    </a>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-2"
+                    onClick={copyPublicProfileLink}
+                  >
+                    <Copy className="size-4" />
+                    复制分享链接
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="text-xs font-semibold text-slate-500">
