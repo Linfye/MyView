@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Popover } from "radix-ui";
 import { Button } from "@/components/ui/button";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { createClient } from "@/lib/supabase/client";
 import { useAnimatedNotice } from "@/components/ui/animated-notice";
 import {
   BookOpen,
+  Check,
+  ChevronDown,
   Film,
   Grid2X2,
   List,
@@ -50,7 +53,8 @@ export default function WorksClientList({
 }) {
   const [items, setItems] = useState(initialItems);
   const [searchQuery, setSearchQuery] = useState("");
-  const [ratingFilter, setRatingFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedRatings, setSelectedRatings] = useState<number[]>([]);
   const [eraFilter, setEraFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
@@ -74,14 +78,11 @@ export default function WorksClientList({
       pureTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
       creator.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cid.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = typeFilter === "all" || item.type === typeFilter;
 
-    let matchesRating = true;
-    if (ratingFilter === "god") matchesRating = item.rating === 10;
-    else if (ratingFilter === "high")
-      matchesRating = item.rating >= 8 && item.rating < 10;
-    else if (ratingFilter === "pass")
-      matchesRating = item.rating >= 6 && item.rating < 8;
-    else if (ratingFilter === "low") matchesRating = item.rating < 6;
+    const roundedRating = Math.round(item.rating);
+    const matchesRating =
+      selectedRatings.length === 0 || selectedRatings.includes(roundedRating);
 
     let matchesEra = true;
     const year = item.year;
@@ -99,7 +100,7 @@ export default function WorksClientList({
       matchesEra = false;
     }
 
-    return matchesSearch && matchesRating && matchesEra;
+    return matchesSearch && matchesType && matchesRating && matchesEra;
   });
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
@@ -115,13 +116,23 @@ export default function WorksClientList({
     currentPageIds.length > 0 && selectedOnPage.length === currentPageIds.length;
 
   const handleFilterChange = (
-    type: "search" | "rating" | "era" | "pageSize",
+    type: "search" | "type" | "era" | "pageSize",
     value: string,
   ) => {
     if (type === "search") setSearchQuery(value);
-    if (type === "rating") setRatingFilter(value);
+    if (type === "type") setTypeFilter(value);
     if (type === "era") setEraFilter(value);
     if (type === "pageSize") setItemsPerPage(Number(value));
+    setCurrentPage(1);
+    setPageInput("1");
+  };
+
+  const toggleRating = (rating: number) => {
+    setSelectedRatings((current) =>
+      current.includes(rating)
+        ? current.filter((item) => item !== rating)
+        : [...current, rating].sort((a, b) => b - a),
+    );
     setCurrentPage(1);
     setPageInput("1");
   };
@@ -175,12 +186,14 @@ export default function WorksClientList({
     setDeleting(false);
   };
 
-  const ratingOptions = [
-    { value: "all", label: "所有评分" },
-    { value: "god", label: "10分" },
-    { value: "high", label: "8-9分" },
-    { value: "pass", label: "6-7分" },
-    { value: "low", label: "6分以下" },
+  const ratingLabel =
+    selectedRatings.length === 0
+      ? "所有评分"
+      : selectedRatings.map((rating) => `${rating}分`).join(" / ");
+  const typeOptions = [
+    { value: "all", label: "全部类型" },
+    { value: "movie", label: "电影" },
+    { value: "book", label: "图书" },
   ];
   const eraOptions = [
     { value: "all", label: "所有时代" },
@@ -204,7 +217,7 @@ export default function WorksClientList({
     <div className="space-y-4 px-1">
       <NoticeHost />
       <div className="app-surface rounded-xl p-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1.5fr_0.8fr_0.8fr_0.7fr_auto]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1.5fr_0.75fr_0.75fr_0.8fr_0.7fr_auto]">
           <input
             type="text"
             className="field-control h-9 text-sm"
@@ -213,11 +226,69 @@ export default function WorksClientList({
             onChange={(e) => handleFilterChange("search", e.target.value)}
           />
           <SelectMenu
-            value={ratingFilter}
-            onValueChange={(value) => handleFilterChange("rating", value)}
-            options={ratingOptions}
-            ariaLabel="筛选评分"
+            value={typeFilter}
+            onValueChange={(value) => handleFilterChange("type", value)}
+            options={typeOptions}
+            ariaLabel="筛选类型"
           />
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition-colors hover:border-teal-200 hover:bg-teal-50/40 focus:border-teal-300 focus:ring-3 focus:ring-teal-100"
+                aria-label="筛选评分"
+              >
+                <span className="truncate">{ratingLabel}</span>
+                <ChevronDown className="size-4 shrink-0 text-slate-400" />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                align="start"
+                sideOffset={6}
+                className="z-[140] w-64 rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-[0_18px_60px_rgba(15,23,42,0.16)]"
+              >
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-500">
+                    评分筛选
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-teal-700 hover:text-teal-900"
+                    onClick={() => {
+                      setSelectedRatings([]);
+                      setCurrentPage(1);
+                      setPageInput("1");
+                    }}
+                  >
+                    清除评分
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {Array.from({ length: 11 }, (_, index) => 10 - index).map(
+                    (rating) => {
+                      const selected = selectedRatings.includes(rating);
+                      return (
+                        <button
+                          key={rating}
+                          type="button"
+                          className={`flex h-9 items-center justify-center gap-1 rounded-lg border text-sm font-semibold transition-colors ${
+                            selected
+                              ? "border-teal-200 bg-teal-700 text-white"
+                              : "border-slate-200 bg-white text-slate-600 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
+                          }`}
+                          onClick={() => toggleRating(rating)}
+                        >
+                          {selected && <Check className="size-3.5" />}
+                          {rating}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
           <SelectMenu
             value={eraFilter}
             onValueChange={(value) => handleFilterChange("era", value)}

@@ -1,8 +1,9 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { BookOpen, Film } from "lucide-react";
+import { SelectMenu } from "@/components/ui/select-menu";
 
 type ArchiveItem = {
   type: string | null;
@@ -285,11 +286,53 @@ function MarkedYearChart({ items }: { items: ArchiveItem[] }) {
 }
 
 export default function DashboardTrendCharts({ items }: { items: ArchiveItem[] }) {
-  const movieItems = items.filter((item) => item.type === "movie");
-  const bookItems = items.filter((item) => item.type === "book");
+  const currentYear = new Date().getFullYear();
+  const [markedYearFilter, setMarkedYearFilter] = useState("all");
+  const markedYearOptions = useMemo(() => {
+    const years = Array.from(
+      new Set(
+        items
+          .map((item) =>
+            item.viewed_at ? new Date(item.viewed_at).getFullYear() : null,
+          )
+          .filter(
+            (year): year is number => year !== null && year < currentYear,
+          ),
+      ),
+    ).sort((a, b) => b - a);
+
+    return [
+      { value: "all", label: "全部" },
+      { value: "thisYear", label: "今年至今" },
+      ...years.map((year) => ({ value: String(year), label: String(year) })),
+    ];
+  }, [items, currentYear]);
+  const filteredItems = useMemo(() => {
+    if (markedYearFilter === "all") return items;
+    return items.filter((item) => {
+      if (!item.viewed_at) return false;
+      const year = new Date(item.viewed_at).getFullYear();
+      if (markedYearFilter === "thisYear") return year === currentYear;
+      return year === Number(markedYearFilter);
+    });
+  }, [items, markedYearFilter, currentYear]);
+  const movieItems = filteredItems.filter((item) => item.type === "movie");
+  const bookItems = filteredItems.filter((item) => item.type === "book");
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-8">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-2 sm:w-56">
+        <label className="text-xs font-semibold text-slate-500">
+          标记年份
+        </label>
+        <SelectMenu
+          value={markedYearFilter}
+          onValueChange={setMarkedYearFilter}
+          options={markedYearOptions}
+          ariaLabel="筛选标记年份"
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-8">
       <CategoryColumn
         title="已看电影 / 剧集"
         unit="部"
@@ -304,7 +347,8 @@ export default function DashboardTrendCharts({ items }: { items: ArchiveItem[] }
         items={bookItems}
         eraSpan={50}
       />
-      <MarkedYearChart items={items} />
+      <MarkedYearChart items={filteredItems} />
+      </div>
     </div>
   );
 }
